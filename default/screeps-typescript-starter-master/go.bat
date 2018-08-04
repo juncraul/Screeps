@@ -1,0 +1,1 @@
+robocopy /MIR dist C:\Users\Raul\AppData\Local\Screeps\scripts\localhost___21025\default

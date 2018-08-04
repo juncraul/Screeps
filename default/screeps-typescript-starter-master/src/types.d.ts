@@ -2,10 +2,21 @@
 
 // memory extension samples
 interface CreepMemory {
+  name: string;
   role: string;
-  room: string;
-  working: boolean;
+  roleString: string;
+  log: boolean;
+  gathering: boolean;
+  assignedMineTaskId?: number;
+  assignedContainerId?: string;
+  assignedTargetId?: string;
+  isUpgradingController: boolean;
+  repairTargetId?: string;
 }
+
+
+
+
 
 interface Memory {
   uuid: number;
