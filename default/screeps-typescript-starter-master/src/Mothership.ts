@@ -1,6 +1,7 @@
 import { Nexus } from "Nexus";
 import { Probe } from "Probe";
 import { ProbeSetup, bodySetup } from "ProbeSetup";
+import { Position } from "estree";
 
 export function run(): void {
   let room = Game.rooms["W8N3"];
@@ -11,6 +12,7 @@ export function run(): void {
   let probeSetupUpgrader = new ProbeSetup("upgrader", { ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "upgrader-" + Game.time, { role: "upgrader" });
   let probeSetupBuilder = new ProbeSetup("builder", { ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "builder-" + Game.time, { role: "builder" });
   let probeSetupCarrier = new ProbeSetup("carrier", { ordered: true, pattern: [CARRY, CARRY, MOVE], sizeLimit: 3 }, "carrier-" + Game.time, { role: "carrier" });
+  let probeSetupRepairer = new ProbeSetup("repairer", { ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "repairer-" + Game.time, { role: "repairer" });
   if (Nexus.getProbes("harvester", room).length < 4) {
     Nexus.spawnCreep(probeSetupHarvester, structureSpawn, energyCapacityRoom);
   } else if (Nexus.getProbes("upgrader", room).length < 2) {
@@ -19,12 +21,15 @@ export function run(): void {
     Nexus.spawnCreep(probeSetupBuilder, structureSpawn, energyCapacityRoom);
   } else if (Nexus.getProbes("carrier", room).length < 2) {
     Nexus.spawnCreep(probeSetupCarrier, structureSpawn, energyCapacityRoom);
+  } else if (Nexus.getProbes("repairer", room).length < 1 && getClosestStructureToRepair(spawn.pos) != null) {
+    Nexus.spawnCreep(probeSetupRepairer, structureSpawn, energyCapacityRoom);
   }
 
   let harvesters = Nexus.getProbes("harvester");
   let upgraders = Nexus.getProbes("upgrader");
   let builders = Nexus.getProbes("builder");
   let carriers = Nexus.getProbes("carrier");
+  let repairers = Nexus.getProbes("repairer");
   harvesters.forEach(function (harvester) {
     harvesterLogic(harvester);
   });
@@ -36,6 +41,9 @@ export function run(): void {
   });
   carriers.forEach(function (carrier) {
     carrierLogic(carrier);
+  });
+  repairers.forEach(function (repairer) {
+    repairerLogic(repairer);
   });
 }
 
@@ -55,22 +63,22 @@ function harvesterLogic(probe: Probe): void {
 
 function upgraderLogic(probe: Probe): void {
   if (_.sum(probe.carry) === probe.carryCapacity) {
-    probe.memory.isUpgradingController = true;
-    probe.memory.gathering = false;
+    probe.memory.isWorking = true;
+    probe.memory.isGathering = false;
   }
   if (_.sum(probe.carry) === 0) {
-    probe.memory.isUpgradingController = false;
-    probe.memory.gathering = true;
+    probe.memory.isWorking = false;
+    probe.memory.isGathering = true;
   }
 
-  if (probe.memory.isUpgradingController) {
+  if (probe.memory.isWorking) {
     let target = getController(probe);
     if (target) {
       probe.upgradeController(target);
     }
   }
-  if (probe.memory.gathering) {
-    let deposit = getClosestFilledDeposit(probe);
+  if (probe.memory.isGathering) {
+    let deposit = getClosestFilledDeposit(probe, false);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
@@ -84,22 +92,22 @@ function upgraderLogic(probe: Probe): void {
 
 function builderLogic(probe: Probe): void {
   if (_.sum(probe.carry) === probe.carryCapacity) {
-    probe.memory.isBuilding = true;
-    probe.memory.gathering = false;
+    probe.memory.isWorking = true;
+    probe.memory.isGathering = false;
   }
   if (_.sum(probe.carry) === 0) {
-    probe.memory.isBuilding = false;
-    probe.memory.gathering = true;
+    probe.memory.isWorking = false;
+    probe.memory.isGathering = true;
   }
 
-  if (probe.memory.isBuilding) {
+  if (probe.memory.isWorking) {
     let target = getClosestConstructionSite(probe);
     if (target) {
       probe.build(target);
     }
   }
-  if (probe.memory.gathering) {
-    let deposit = getClosestFilledDeposit(probe);
+  if (probe.memory.isGathering) {
+    let deposit = getClosestFilledDeposit(probe, false);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
@@ -113,14 +121,58 @@ function builderLogic(probe: Probe): void {
 
 function carrierLogic(probe: Probe): void {
   if (_.sum(probe.carry) === probe.carryCapacity) {
+    probe.memory.isWorking = true;
+    probe.memory.isGathering = false;
+  }
+  if (_.sum(probe.carry) === 0) {
+    probe.memory.isWorking = false;
+    probe.memory.isGathering = true;
+  }
+  if (probe.memory.isWorking) {
     let supply = getStructureToSupply(probe);
     if (supply) {
       probe.transfer(supply, RESOURCE_ENERGY);
     }
-  } else {
-    let deposit = getClosestFilledDeposit(probe);
+    else {
+      let supplyControllerDeposit = getDepositNextToController(probe.room, true);
+      if (supplyControllerDeposit.length > 0) {
+        probe.transfer(supplyControllerDeposit[0], RESOURCE_ENERGY);
+      }
+    }
+  }
+  if (probe.memory.isGathering) {
+    let deposit = getClosestFilledDeposit(probe, true);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
+    }
+  }
+}
+
+function repairerLogic(probe: Probe): void {
+  if (_.sum(probe.carry) === probe.carryCapacity) {
+    probe.memory.isWorking = true;
+    probe.memory.isGathering = false;
+  }
+  if (_.sum(probe.carry) === 0) {
+    probe.memory.isWorking = false;
+    probe.memory.isGathering = true;
+  }
+
+  if (probe.memory.isWorking) {
+    let target = getClosestStructureToRepair(probe.pos);
+    if (target) {
+      probe.repair(target);
+    }
+  }
+  if (probe.memory.isGathering) {
+    let deposit = getClosestFilledDeposit(probe, false);
+    if (deposit) {
+      probe.withdraw(deposit, RESOURCE_ENERGY);
+    } else {
+      let source = getClosestActiveSource(probe);
+      if (source) {
+        probe.harvest(source);
+      }
     }
   }
 }
@@ -140,11 +192,13 @@ function getClosestEmptyDeposit(probe: Probe): Structure | null {
   return deposit;
 }
 
-function getClosestFilledDeposit(probe: Probe//, resource: ResourceConstant = RESOURCE_ENERGY
+function getClosestFilledDeposit(probe: Probe, excludeControllerDeposit: boolean//, resource: ResourceConstant = RESOURCE_ENERGY
 ): Structure | null {
+  let controllerDeposits = getDepositNextToController(probe.room, false);
   let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
     filter: structure =>
-      ((structure.structureType == STRUCTURE_CONTAINER || structure.structureType == STRUCTURE_STORAGE) && structure.store[RESOURCE_ENERGY] > 0)
+      ((structure.structureType == STRUCTURE_CONTAINER || structure.structureType == STRUCTURE_STORAGE) && structure.store[RESOURCE_ENERGY] > 0
+        && (!excludeControllerDeposit || (excludeControllerDeposit && !controllerDeposits.includes(structure))))
   })
   return deposit;
 }
@@ -173,4 +227,20 @@ function getStructureToSupply(probe: Probe): Structure | null  {
       structure.structureType == STRUCTURE_LINK) && structure.energy < structure.energyCapacity)
   });
   return deposit
+}
+
+function getDepositNextToController(room: Room, notFilled: boolean): Structure[] {
+  if (room.controller == null)
+    return [];
+  let deposits = room.controller.pos.findInRange(FIND_STRUCTURES, 3, {
+    filter: (structure: any) => ((structure.structureType == STRUCTURE_CONTAINER) && (!notFilled || (notFilled &&_.sum(structure.store) < structure.storeCapacity)))
+  });
+  return deposits;
+}
+
+function getClosestStructureToRepair(pos: RoomPosition): Structure | null {
+  let structure = pos.findClosestByPath(FIND_STRUCTURES, {
+    filter: structure => (structure.hits < structure.hitsMax * 0.8)
+  });
+  return structure;
 }

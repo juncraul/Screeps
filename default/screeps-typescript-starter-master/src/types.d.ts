@@ -6,12 +6,11 @@ interface CreepMemory {
   role: string;
   roleString: string;
   log: boolean;
-  gathering: boolean;
+  isGathering: boolean;
   assignedMineTaskId?: number;
   assignedContainerId?: string;
   assignedTargetId?: string;
-  isUpgradingController: boolean;
-  isBuilding: boolean;
+  isWorking: boolean;
   repairTargetId?: string;
 }
 

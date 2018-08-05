@@ -59,6 +59,14 @@ export class Probe {
     return result;
   }
 
+  repair(structure: Structure) {
+    let result = this.creep.repair(structure);
+    if (result == ERR_NOT_IN_RANGE) {
+      this.goTo(structure.pos);
+    }
+    return result;
+  }
+
   harvest(source: Source | Mineral) {
     let result = this.creep.harvest(source);
     if (result == ERR_NOT_IN_RANGE) {
