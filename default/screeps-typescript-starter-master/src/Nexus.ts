@@ -9,9 +9,9 @@ export interface SpawnRequest {
 
 export class Nexus {
 
-  public static spawnCreep(probeSetup: ProbeSetup, spawnToUse: StructureSpawn): number {
+  public static spawnCreep(probeSetup: ProbeSetup, spawnToUse: StructureSpawn, energy: number): number {
 
-    let result = spawnToUse.spawnCreep(probeSetup.body, probeSetup.name, {
+    let result = spawnToUse.spawnCreep(probeSetup.generateBody(energy), probeSetup.name, {
       memory: probeSetup.memory
     });
     return result;

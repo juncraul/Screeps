@@ -11,6 +11,7 @@ interface CreepMemory {
   assignedContainerId?: string;
   assignedTargetId?: string;
   isUpgradingController: boolean;
+  isBuilding: boolean;
   repairTargetId?: string;
 }
 

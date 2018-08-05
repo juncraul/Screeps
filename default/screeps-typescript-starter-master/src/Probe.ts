@@ -51,9 +51,16 @@ export class Probe {
     //Game.zerg[this.name] = this; // register global reference
   }
 
+  build(structure: ConstructionSite) {
+    let result = this.creep.build(structure);
+    if (result == ERR_NOT_IN_RANGE) {
+      this.goTo(structure.pos);
+    }
+    return result;
+  }
+
   harvest(source: Source | Mineral) {
     let result = this.creep.harvest(source);
-    if (!this.actionLog.harvest) this.actionLog.harvest = (result == OK);
     if (result == ERR_NOT_IN_RANGE) {
       this.goTo(source.pos);
     }
@@ -67,7 +74,14 @@ export class Probe {
     } else {
       result = this.creep.transfer(target, resourceType, amount);
     }
-    if (!this.actionLog.transfer) this.actionLog.transfer = (result == OK);
+    if (result == ERR_NOT_IN_RANGE) {
+      this.goTo(target.pos);
+    }
+    return result;
+  }
+
+  withdraw(target: Tombstone | Structure, resourceType: ResourceConstant, amount?: number) {
+    let result = this.creep.withdraw(target, resourceType, amount);
     if (result == ERR_NOT_IN_RANGE) {
       this.goTo(target.pos);
     }
