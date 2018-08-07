@@ -9,20 +9,34 @@ export interface SpawnRequest {
 
 export class Nexus {
 
-  public static spawnCreep(probeSetup: ProbeSetup, spawnToUse: StructureSpawn, energy: number): number {
-
-    let result = spawnToUse.spawnCreep(probeSetup.generateBody(energy), probeSetup.name, {
-      memory: probeSetup.memory
-    });
+  public static spawnCreep(probeSetup: ProbeSetup, spawnToUse: StructureSpawn | Room, energy: number): number {
+    let result = -1;
+    if (spawnToUse instanceof StructureSpawn) {
+      result = spawnToUse.spawnCreep(probeSetup.generateBody(energy), probeSetup.name, {
+        memory: probeSetup.memory
+      });
+    }
+    else {
+      let spawns = spawnToUse.find(FIND_MY_SPAWNS);
+      for (let i = 0; i < spawns.length; i++) {
+        if (!spawns[i].canCreateCreep) continue;
+        result = spawns[i].spawnCreep(probeSetup.generateBody(energy), probeSetup.name, {
+          memory: probeSetup.memory
+        });
+        break;
+      }
+    }
     return result;
   }
 
-  public static getProbes(role: string, room?: Room): Probe[] {
+  public static getProbes(role: string, room?: string, checkRemote?: boolean): Probe[] {
     let creeps;
     if (room == undefined) {
       creeps = _.filter(Game.creeps, (creep) => creep.memory.role == role);
+    } else if (checkRemote == undefined || !checkRemote) {
+      creeps = _.filter(Game.creeps, (creep) => creep.memory.role == role && creep.room.name == room);
     } else {
-      creeps = _.filter(Game.creeps, (creep) => creep.memory.role == role && creep.room == room);
+      creeps = _.filter(Game.creeps, (creep) => creep.memory.role == role && creep.memory.remote == room);
     }
     let probes = new Array<Probe>();
     creeps.forEach(function (creep) {

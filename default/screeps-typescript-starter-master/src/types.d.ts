@@ -12,6 +12,8 @@ interface CreepMemory {
   assignedTargetId?: string;
   isWorking: boolean;
   repairTargetId?: string;
+  remote: string;
+  homeName: string;
 }
 
 

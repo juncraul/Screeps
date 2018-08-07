@@ -13,13 +13,11 @@ export function bodyCost(bodyparts: BodyPartConstant[]): number {
 }
 
 export class ProbeSetup {
-  role: string;
   bodySetup: bodySetup;
   name: string;
   memory: any;
 
-  constructor(roleName: string, bodySetup = {}, name: string, memory: any) {
-    this.role = roleName;
+  constructor(bodySetup = {}, name: string, memory: any) {
     _.defaults(bodySetup, {
       pattern: [],
       sizeLimit: Infinity,
