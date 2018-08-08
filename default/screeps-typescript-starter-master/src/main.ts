@@ -1,6 +1,4 @@
 import { ErrorMapper } from "utils/ErrorMapper";
-import { Probe } from "Probe";
-import { Nexus } from "Nexus";
 import * as Mothership from "Mothership";
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change

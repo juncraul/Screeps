@@ -11,7 +11,9 @@
     "experimentalDecorators": true,
     "noImplicitReturns": true,
     "allowSyntheticDefaultImports": true,
-    "allowUnreachableCode": false
+    "allowUnreachableCode": false,
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true
   },
   "exclude": [
     "node_modules"

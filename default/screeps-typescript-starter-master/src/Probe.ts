@@ -98,7 +98,14 @@ export class Probe {
 
   upgradeController(controller: StructureController) {
     let result = this.creep.upgradeController(controller);
-    if (!this.actionLog.upgradeController) this.actionLog.upgradeController = (result == OK);
+    if (result == ERR_NOT_IN_RANGE) {
+      this.goTo(controller.pos);
+    }
+    return result;
+  }
+
+  reserve(controller: StructureController) {
+    let result = this.creep.reserveController(controller);
     if (result == ERR_NOT_IN_RANGE) {
       this.goTo(controller.pos);
     }
@@ -111,7 +118,6 @@ export class Probe {
 
   goToDifferentRoom(destination: string) {
     //return this.creep.moveTo(new RoomPosition(25, 25, destination.name));
-
     //Obviously make this not hard coded
     switch (destination) {
       case "W8N3":
