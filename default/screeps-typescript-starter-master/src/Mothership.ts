@@ -1,68 +1,74 @@
 import { Nexus } from "Nexus";
 import { Probe } from "Probe";
 import { ProbeSetup } from "ProbeSetup";
+import { Cannon } from "Cannon";
 
 export function run(): void {
-  let room = Game.rooms["W8N3"];
-  let roomsToHarvest = ["W7N3"];
-  let spawn = room.find(FIND_STRUCTURES, { filter: structure => structure.structureType == STRUCTURE_SPAWN })[0]
-  let energyCapacityRoom = room.energyCapacityAvailable;
-  let structureSpawn = new StructureSpawn(spawn.id);
+  let roomsToHarvest = ["W7N3", "W8N2"];
   let probeSetupHarvester = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit:3 }, "harvester-" + Game.time, { role: "harvester" });
   let probeSetupUpgrader = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "upgrader-" + Game.time, { role: "upgrader" });
   let probeSetupBuilder = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "builder-" + Game.time, { role: "builder" });
   let probeSetupCarrier = new ProbeSetup({ ordered: true, pattern: [CARRY, CARRY, MOVE], sizeLimit: 3 }, "carrier-" + Game.time, { role: "carrier" });
   let probeSetupRepairer = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "repairer-" + Game.time, { role: "repairer" });
 
-  if (Nexus.getProbes("harvester", room.name).length < 4) {
-    Nexus.spawnCreep(probeSetupHarvester, structureSpawn, energyCapacityRoom);
-  } else if (Nexus.getProbes("upgrader", room.name).length < 2) {
-    Nexus.spawnCreep(probeSetupUpgrader, structureSpawn, energyCapacityRoom);
-  } else if (Nexus.getProbes("builder", room.name).length < 2 && getConstructionSitesFromRoom(room).length > 0) {
-    Nexus.spawnCreep(probeSetupBuilder, structureSpawn, energyCapacityRoom);
-  } else if (Nexus.getProbes("carrier", room.name).length < 2) {
-    Nexus.spawnCreep(probeSetupCarrier, structureSpawn, energyCapacityRoom);
-  } else if (Nexus.getProbes("repairer", room.name).length < 1 && getClosestStructureToRepair(spawn.pos, 0.7) != null) {
-    Nexus.spawnCreep(probeSetupRepairer, structureSpawn, energyCapacityRoom);
-  } else if (spawnLongDistanceHarvester(room, roomsToHarvest)) {
-    console.log("Spawning long distance harvester.");
-  } else if (spawnLongDistanceCarrier(room, roomsToHarvest)) {
-    console.log("Spawning long distance carrier.");
-  } else if (spawnClaimer(room, roomsToHarvest)) {
-    console.log("Spawning claimer.")
-  }
+  let myRooms = getmyRoomsWithController();
+  myRooms.forEach(function (room) {
+    let spawn = room.find(FIND_STRUCTURES, { filter: structure => structure.structureType == STRUCTURE_SPAWN })[0]
+    let energyCapacityRoom = room.energyCapacityAvailable;
+    let structureSpawn = new StructureSpawn(spawn.id);
 
-  let harvesters = Nexus.getProbes("harvester");
-  let upgraders = Nexus.getProbes("upgrader");
-  let builders = Nexus.getProbes("builder");
-  let carriers = Nexus.getProbes("carrier");
-  let repairers = Nexus.getProbes("repairer");
-  let longDistanceHarvesters = Nexus.getProbes("longDistanceHarvester");
-  let longDistanceCarriers = Nexus.getProbes("longDistanceCarrier");
-  let claimers = Nexus.getProbes("claimer");
-  harvesters.forEach(function (harvester) {
-    harvesterLogic(harvester);
-  });
-  upgraders.forEach(function (upgrader) {
-    upgraderLogic(upgrader);
-  });
-  builders.forEach(function (builder) {
-    builderLogic(builder);
-  });
-  carriers.forEach(function (carrier) {
-    carrierLogic(carrier);
-  });
-  repairers.forEach(function (repairer) {
-    repairerLogic(repairer);
-  });
-  longDistanceHarvesters.forEach(function (longDistanceHarvester) {
-    longDistanceHarvestersLogic(longDistanceHarvester);
-  });
-  longDistanceCarriers.forEach(function (longDistanceCarrier) {
-    longDistanceCarrierLogic(longDistanceCarrier);
-  });
-  claimers.forEach(function (claimer) {
-    claimerLogic(claimer);
+    if (Nexus.getProbes("harvester", room.name).length < 4) {
+      Nexus.spawnCreep(probeSetupHarvester, structureSpawn, energyCapacityRoom);
+    } else if (Nexus.getProbes("upgrader", room.name).length < 2) {
+      Nexus.spawnCreep(probeSetupUpgrader, structureSpawn, energyCapacityRoom);
+    } else if (Nexus.getProbes("builder", room.name).length < 2 && getConstructionSitesFromRoom(room).length > 0) {
+      Nexus.spawnCreep(probeSetupBuilder, structureSpawn, energyCapacityRoom);
+    } else if (Nexus.getProbes("carrier", room.name).length < 2) {
+      Nexus.spawnCreep(probeSetupCarrier, structureSpawn, energyCapacityRoom);
+    } else if (Nexus.getProbes("repairer", room.name).length < 1 && getClosestStructureToRepair(structureSpawn.pos, 0.7) != null) {
+      Nexus.spawnCreep(probeSetupRepairer, structureSpawn, energyCapacityRoom);
+    } else if (spawnLongDistanceHarvester(room, roomsToHarvest)) {
+      console.log("Spawning long distance harvester.");
+    } else if (spawnLongDistanceCarrier(room, roomsToHarvest)) {
+      console.log("Spawning long distance carrier.");
+    } else if (spawnClaimer(room, roomsToHarvest)) {
+      console.log("Spawning claimer.")
+    }
+
+    let allCannons = Nexus.getCannons(room);
+    allCannons.forEach(function (cannon) {
+      cannonLogic(cannon);
+    })
+  })
+
+  let allCreeps = Nexus.getProbes();
+  allCreeps.forEach(function (creep) {
+    switch (creep.memory.role) {
+      case "harvester":
+        harvesterLogic(creep);
+        break;
+      case "upgrader":
+        upgraderLogic(creep);
+        break;
+      case "builder":
+        builderLogic(creep);
+        break;
+      case "carrier":
+        carrierLogic(creep);
+        break;
+      case "repairer":
+        repairerLogic(creep);
+        break;
+      case "longDistanceHarvester":
+        longDistanceHarvesterLogic(creep);
+        break;
+      case "longDistanceCarrier":
+        longDistanceCarrierLogic(creep);
+        break;
+      case "claimer":
+        claimerLogic(creep);
+        break;
+    }
   });
 }
 
@@ -196,7 +202,7 @@ function repairerLogic(probe: Probe): void {
   }
 }
 
-function longDistanceHarvestersLogic(probe: Probe): void {
+function longDistanceHarvesterLogic(probe: Probe): void {
   if (probe.room.name != probe.memory.remote) {
     probe.goToDifferentRoom(probe.memory.remote);
   }
@@ -281,6 +287,25 @@ function longDistanceCarrierLogic(probe: Probe): void {
   }
 }
 
+function cannonLogic(cannon: Cannon): void {
+  let enemy = getClosestEnemy(cannon);
+  if (enemy) {
+    cannon.attack(enemy);
+  }
+  else {
+    let structure = getClosestStructureToRepair(cannon.pos, 0.7);//TODO: Use closest by range
+    if (structure) {
+      cannon.repair(structure);
+    }
+    else {
+      let structure = getClosestStructureToRepair(cannon.pos, 1);
+      if (structure) {
+        cannon.repair(structure);
+      }
+    }
+  }
+}
+
 function claimerLogic(probe: Probe): void {
   if (probe.room.name != probe.memory.remote) {
     probe.goToDifferentRoom(probe.memory.remote);
@@ -344,8 +369,7 @@ function getStructureToSupplyForReproduction(probe: Probe): Structure | null  {
   let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
     filter: structure => ((
       structure.structureType == STRUCTURE_SPAWN ||
-      structure.structureType == STRUCTURE_EXTENSION ||
-      structure.structureType == STRUCTURE_LINK) && structure.energy < structure.energyCapacity)
+      structure.structureType == STRUCTURE_EXTENSION) && structure.energy < structure.energyCapacity)
   });
   return deposit
 }
@@ -357,7 +381,8 @@ function getStructureToSupply(probe: Probe): Structure | null {
       structure.structureType == STRUCTURE_EXTENSION ||
       structure.structureType == STRUCTURE_LINK) && structure.energy < structure.energyCapacity) ||
       ((structure.structureType == STRUCTURE_STORAGE ||
-        structure.structureType == STRUCTURE_CONTAINER) && _.sum(structure.store) < structure.storeCapacity)
+        structure.structureType == STRUCTURE_CONTAINER) && _.sum(structure.store) < structure.storeCapacity) ||
+      (structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity * 0.75)
   });
   return deposit
 }
@@ -376,6 +401,21 @@ function getClosestStructureToRepair(pos: RoomPosition, damageProportion: number
     filter: structure => (structure.hits < structure.hitsMax * damageProportion)
   });
   return structure;
+}
+
+function getClosestEnemy(cannon: Cannon): Creep | null {
+  let enemy = cannon.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+  return enemy;
+}
+
+function getmyRoomsWithController(): Room[] {
+  var mySpawns = Object.getOwnPropertyNames(Game.spawns)
+  var roomsWithSpawns = []
+  for (var i = 0; i < mySpawns.length; i++) {
+    roomsWithSpawns.push(Game.spawns[mySpawns[i]].room)
+  }
+
+  return roomsWithSpawns;
 }
 
 function spawnLongDistanceHarvester(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean {
@@ -404,7 +444,7 @@ function spawnLongDistanceCarrier(roomToSpawnFrom: Room, roomsToHarvest: string[
     let probeSetupLongDistanceCarrier = new ProbeSetup({ ordered: true, pattern: [CARRY, CARRY, MOVE], sizeLimit: 5 }, "longDistanceCarrier-" + Game.time, { role: "longDistanceCarrier", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
     let carriers = Nexus.getProbes("longDistanceCarrier", roomsToHarvest[i], true);
     let roomToHarvest = Game.rooms[roomsToHarvest[i]];
-    let containers = roomToHarvest != null ? roomToHarvest.find(FIND_STRUCTURES, { filter: (structure) => structure.structureType == STRUCTURE_CONTAINER }).length : 1;
+    let containers = roomToHarvest != null ? roomToHarvest.find(FIND_STRUCTURES, { filter: (structure) => structure.structureType == STRUCTURE_CONTAINER }).length : 0;
     let energyToUse = 750;//10 Carry - 5 Move = 750
 
     if (carriers.length > containers || roomToSpawnFrom.energyAvailable < energyToUse)

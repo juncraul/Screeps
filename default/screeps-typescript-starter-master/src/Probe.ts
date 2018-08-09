@@ -117,31 +117,7 @@ export class Probe {
   };
 
   goToDifferentRoom(destination: string) {
-    //return this.creep.moveTo(new RoomPosition(25, 25, destination.name));
-    //Obviously make this not hard coded
-    switch (destination) {
-      case "W8N3":
-        return this.creep.moveTo(new RoomPosition(0, 15, this.creep.room.name));
-      case "W7N3":
-        return this.creep.moveTo(new RoomPosition(49, 15, this.creep.room.name));
-    }
-    return 0;
-
-    //const exitDir = this.creep.room.findExitTo(destination);
-    //const exit = this.creep.pos.findClosestByRange(exitDir);
-    //return this.creep.moveTo(exit);
-
-    //let exitDir = this.creep.room.findExitTo(destination);
-    //let positionAtDirectoin = this.creep.pos.getPositionAtDirection(direction)
-    //var exit = this.creep.pos.findClosestByRange(exitDir);
-    //if ((this.creep.pos.x == 0 || this.creep.pos.x == 49 || this.creep.pos.y == 0 || this.creep.pos.y == 49) && !(exit.x == this.creep.pos.x && exit.y == this.creep.pos.y)) {
-    //  var goToX = this.creep.pos.x == 0 ? 1 : (this.creep.pos.x == 49 ? 48 : this.creep.pos.x)
-    //  var goToY = this.creep.pos.y == 0 ? 1 : (this.creep.pos.y == 49 ? 48 : this.creep.pos.y)
-    //  this.creep.moveTo(goToX, goToY)
-    //}
-    //else {
-    //  this.creep.moveTo(exit);
-    //}
+    return this.creep.moveTo(new RoomPosition(25, 25, destination));
   }
 
   static getActiveBodyPartsFromArrayOfProbes(probes: Probe[], bodyPart: BodyPartConstant) {

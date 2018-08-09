@@ -1,5 +1,6 @@
 import { ProbeSetup } from 'ProbeSetup';
 import { Probe } from 'Probe';
+import { Cannon } from 'Cannon';
 
 export interface SpawnRequest {
   setup: ProbeSetup;					// creep body generator to use
@@ -29,19 +30,35 @@ export class Nexus {
     return result;
   }
 
-  public static getProbes(role: string, room?: string, checkRemote?: boolean): Probe[] {
+  public static getProbes(role?: string, room?: string, checkRemote?: boolean): Probe[] {
     let creeps;
-    if (room == undefined) {
-      creeps = _.filter(Game.creeps, (creep) => creep.memory.role == role);
-    } else if (checkRemote == undefined || !checkRemote) {
-      creeps = _.filter(Game.creeps, (creep) => creep.memory.role == role && creep.room.name == room);
-    } else {
-      creeps = _.filter(Game.creeps, (creep) => creep.memory.role == role && creep.memory.remote == room);
+    if (role == undefined) {
+      creeps = _.filter(Game.creeps, (creep) => true);
+    }
+    else {
+      if (room == undefined) {
+        creeps = _.filter(Game.creeps, (creep) => creep.memory.role == role);
+      } else if (checkRemote == undefined || !checkRemote) {
+        creeps = _.filter(Game.creeps, (creep) => creep.memory.role == role && creep.room.name == room);
+      } else {
+        creeps = _.filter(Game.creeps, (creep) => creep.memory.role == role && creep.memory.remote == room);
+      }
     }
     let probes = new Array<Probe>();
     creeps.forEach(function (creep) {
       probes.push(new Probe(creep));
     });
     return probes;
+  }
+
+  public static getCannons(room: Room): Cannon[] {
+    let towers = room.find(FIND_MY_STRUCTURES, { filter: object => { return object.structureType == STRUCTURE_TOWER } });
+    let cannons = new Array<Cannon>();
+    towers.forEach(function (tower) {
+      if (tower instanceof StructureTower) {
+        cannons.push(new Cannon(tower));
+      }
+    });
+    return cannons;
   }
 }
