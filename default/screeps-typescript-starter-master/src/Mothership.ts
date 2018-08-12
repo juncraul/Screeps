@@ -2,16 +2,18 @@ import { Nexus } from "Nexus";
 import { Probe } from "Probe";
 import { ProbeSetup } from "ProbeSetup";
 import { Cannon } from "Cannon";
+import { Tasks } from "Tasks";
+import { Helper } from "Helper";
 
 export function run(): void {
-  let roomsToHarvest = ["W7N3", "W8N2"];
+  let roomsToHarvest = Tasks.getRoomsToHarvest();
   let probeSetupHarvester = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit:3 }, "harvester-" + Game.time, { role: "harvester" });
   let probeSetupUpgrader = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "upgrader-" + Game.time, { role: "upgrader" });
   let probeSetupBuilder = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "builder-" + Game.time, { role: "builder" });
   let probeSetupCarrier = new ProbeSetup({ ordered: true, pattern: [CARRY, CARRY, MOVE], sizeLimit: 3 }, "carrier-" + Game.time, { role: "carrier" });
   let probeSetupRepairer = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "repairer-" + Game.time, { role: "repairer" });
 
-  let myRooms = getmyRoomsWithController();
+  let myRooms = Tasks.getmyRoomsWithController();
   myRooms.forEach(function (room) {
     let spawn = room.find(FIND_STRUCTURES, { filter: structure => structure.structureType == STRUCTURE_SPAWN })[0]
     let energyCapacityRoom = room.energyCapacityAvailable;
@@ -27,13 +29,15 @@ export function run(): void {
       Nexus.spawnCreep(probeSetupCarrier, structureSpawn, energyCapacityRoom);
     } else if (Nexus.getProbes("repairer", room.name).length < 1 && getClosestStructureToRepair(structureSpawn.pos, 0.7) != null) {
       Nexus.spawnCreep(probeSetupRepairer, structureSpawn, energyCapacityRoom);
+    } else if (spawnSoldier(room, roomsToHarvest)) {
+      console.log("Spawning soldier.");
     } else if (spawnLongDistanceHarvester(room, roomsToHarvest)) {
       console.log("Spawning long distance harvester.");
     } else if (spawnLongDistanceCarrier(room, roomsToHarvest)) {
       console.log("Spawning long distance carrier.");
     } else if (spawnClaimer(room, roomsToHarvest)) {
-      console.log("Spawning claimer.")
-    }
+      console.log("Spawning claimer.");
+    } 
 
     let allCannons = Nexus.getCannons(room);
     allCannons.forEach(function (cannon) {
@@ -41,32 +45,35 @@ export function run(): void {
     })
   })
 
-  let allCreeps = Nexus.getProbes();
-  allCreeps.forEach(function (creep) {
-    switch (creep.memory.role) {
+  let allProbes = Nexus.getProbes();
+  allProbes.forEach(function (probe) {
+    switch (probe.memory.role) {
       case "harvester":
-        harvesterLogic(creep);
+        harvesterLogic(probe);
         break;
       case "upgrader":
-        upgraderLogic(creep);
+        upgraderLogic(probe);
         break;
       case "builder":
-        builderLogic(creep);
+        builderLogic(probe);
         break;
       case "carrier":
-        carrierLogic(creep);
+        carrierLogic(probe);
         break;
       case "repairer":
-        repairerLogic(creep);
+        repairerLogic(probe);
         break;
       case "longDistanceHarvester":
-        longDistanceHarvesterLogic(creep);
+        longDistanceHarvesterLogic(probe);
         break;
       case "longDistanceCarrier":
-        longDistanceCarrierLogic(creep);
+        longDistanceCarrierLogic(probe);
         break;
       case "claimer":
-        claimerLogic(creep);
+        claimerLogic(probe);
+        break;
+      case "soldier":
+        soldierLogic(probe);
         break;
     }
   });
@@ -79,7 +86,7 @@ function harvesterLogic(probe: Probe): void {
       probe.transfer(deposit, RESOURCE_ENERGY);
     }
   } else {
-    let source = getClosestActiveSource(probe);
+    let source = getClosestActiveSourceDivided(probe);
     if (source) {
       probe.harvest(source);
     }
@@ -107,7 +114,7 @@ function upgraderLogic(probe: Probe): void {
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
-      let source = getClosestActiveSource(probe);
+      let source = getClosestActiveSourceDivided(probe);
       if (source) {
         probe.harvest(source);
       }
@@ -136,7 +143,7 @@ function builderLogic(probe: Probe): void {
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
-      let source = getClosestActiveSource(probe);
+      let source = getClosestActiveSourceDivided(probe);
       if (source) {
         probe.harvest(source);
       }
@@ -162,6 +169,12 @@ function carrierLogic(probe: Probe): void {
       let supplyControllerDeposit = getDepositNextToController(probe.room, true);
       if (supplyControllerDeposit.length > 0) {
         probe.transfer(supplyControllerDeposit[0], RESOURCE_ENERGY);
+      }
+      else {
+        let differentOtherStucture = getStructureToSupply(probe);
+        if (differentOtherStucture) {
+          probe.transfer(differentOtherStucture, RESOURCE_ENERGY);
+        }
       }
     }
   }
@@ -194,7 +207,7 @@ function repairerLogic(probe: Probe): void {
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
-      let source = getClosestActiveSource(probe);
+      let source = getClosestActiveSourceDivided(probe);
       if (source) {
         probe.harvest(source);
       }
@@ -217,28 +230,34 @@ function longDistanceHarvesterLogic(probe: Probe): void {
     }
 
     if (probe.memory.isWorking) {
-      let deposit = getClosestEmptyDeposit(probe);
-      if (deposit) {
-        probe.transfer(deposit, RESOURCE_ENERGY);
-      } else {
-        let target = getClosestStructureToRepair(probe.pos, 0.4);
-        if (target) {
-          probe.repair(target);
-        }
-        else {
-          let target = getClosestConstructionSite(probe);
+      let containerToConstruct = getConstructionSiteWithinRange(probe.pos, STRUCTURE_CONTAINER, 3);
+      if (containerToConstruct) {
+        probe.build(containerToConstruct);
+      }
+      else {
+        let deposit = getClosestEmptyDeposit(probe);
+        if (deposit) {
+          probe.transfer(deposit, RESOURCE_ENERGY);
+        } else {
+          let target = getClosestStructureToRepair(probe.pos, 0.4);
           if (target) {
-            probe.build(target);
+            probe.repair(target);
           }
           else {
-            let target = getClosestStructureToRepair(probe.pos, 0.7);
+            let target = getClosestConstructionSite(probe);
             if (target) {
-              probe.repair(target);
+              probe.build(target);
             }
             else {
-              let target = getClosestStructureToRepair(probe.pos, 1.0);
+              let target = getClosestStructureToRepair(probe.pos, 0.7);
               if (target) {
                 probe.repair(target);
+              }
+              else {
+                let target = getClosestStructureToRepair(probe.pos, 1.0);
+                if (target) {
+                  probe.repair(target);
+                }
               }
             }
           }
@@ -247,7 +266,7 @@ function longDistanceHarvesterLogic(probe: Probe): void {
     }
     if (probe.memory.isGathering)
     {
-      let source = getClosestActiveSource(probe);
+      let source = getClosestActiveSourceDivided(probe);
       if (source) {
         probe.harvest(source);
       }
@@ -317,10 +336,70 @@ function claimerLogic(probe: Probe): void {
   }
 }
 
-function getClosestActiveSource(probe: Probe): Source | null {
-  let source = probe.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
-  return source;
+function soldierLogic(probe: Probe): void {
+  if (probe.room.name != probe.memory.remote) {
+    probe.goToDifferentRoom(probe.memory.remote);
+  } else {
+    let enemy = getClosestEnemy(probe);
+    if (enemy) {
+      probe.attack(enemy);
+    }
+  } 
 }
+
+function getClosestActiveSourceDivided(probe: Probe): Source | null {
+  let sources = probe.room.find(FIND_SOURCES_ACTIVE);
+  let arraySources: number[];
+  arraySources = [];
+  let currentSourceIndex = 0;
+  let i = 0;
+  sources.forEach(function (source) {
+    let count = Helper.getCashedMemory("Harvesting-" + source.id);
+    count = count == undefined ? 0 : count;
+    if (source.id == probe.memory.targetId) {
+      count--;
+      currentSourceIndex = i;
+    }
+    arraySources.push(count);
+    i++;
+  })
+  let minIndex = arraySources.indexOf(Math.min(...arraySources));
+  arraySources[minIndex] += 100;
+  let secondMinIndex = arraySources.indexOf(Math.min(...arraySources));//Get the second minimum index by temporarly seeting the minimum to a hich number.
+  arraySources[minIndex] -= 100;
+  if (minIndex != undefined) {
+    //if (probe.room.name == "W8N3") {
+    //  console.log("-------------");
+    //  console.log(probe.creep.id);
+    //  console.log("index 0 - " + sources[0] + " " + arraySources[0])
+    //  console.log("index 1 - " + sources[1] + " " + arraySources[1])
+    //  console.log("index m - " + sources[minIndex] + " " + arraySources[minIndex])
+    //  console.log("index c - " + sources[currentSourceIndex] + " " + arraySources[currentSourceIndex])
+    //}
+    if (arraySources[currentSourceIndex] > arraySources[minIndex]) {
+      let source: Source | null;
+      if (arraySources[minIndex] == arraySources[secondMinIndex]) {
+        source = probe.pos.findPathTo(sources[minIndex]).length < probe.pos.findPathTo(sources[secondMinIndex]).length ? sources[minIndex] : sources[secondMinIndex];
+      } else {
+        source = sources[minIndex];
+      }
+      Helper.incrementCashedMemory("Harvesting-" + probe.memory.targetId, -1);
+      Helper.incrementCashedMemory("Harvesting-" + source.id, 1);
+      return source;
+    }
+    else {
+      return sources[currentSourceIndex];
+    }
+  } else {
+    return null
+  }
+}
+
+//Old function that returns active source
+//function getClosestActiveSource(probe: Probe): Source | null {
+//  let source = probe.pos.findClosestByPath(FIND_SOURCES_ACTIVE);
+//  return source;
+//}
 
 function getClosestEmptyDeposit(probe: Probe): Structure | null {
   let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
@@ -337,7 +416,7 @@ function getClosestFilledDeposit(probe: Probe, excludeControllerDeposit: boolean
   let controllerDeposits = getDepositNextToController(probe.room, false);
   let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
     filter: structure =>
-      ((structure.structureType == STRUCTURE_CONTAINER || structure.structureType == STRUCTURE_STORAGE) && structure.store[RESOURCE_ENERGY] > 0
+      ((structure.structureType == STRUCTURE_CONTAINER) && structure.store[RESOURCE_ENERGY] > 0
         && (!excludeControllerDeposit || (excludeControllerDeposit && !controllerDeposits.includes(structure))))
   })
   return deposit;
@@ -353,6 +432,11 @@ function getController(probeOrRoom: Probe | Room): StructureController | null {
     target = probeOrRoom.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_CONTROLLER) })[0];
   }
   return target instanceof StructureController ? target : null;
+}
+
+function getConstructionSiteWithinRange(pos: RoomPosition, structureType: StructureConstant, range: number): ConstructionSite | null {
+  let construnctionSite = pos.findInRange(FIND_CONSTRUCTION_SITES, range, { filter: (structure: any) => structure.structureType == structureType })[0];
+  return construnctionSite;
 }
 
 function getClosestConstructionSite(probe: Probe): ConstructionSite | null {
@@ -380,8 +464,7 @@ function getStructureToSupply(probe: Probe): Structure | null {
       structure.structureType == STRUCTURE_SPAWN ||
       structure.structureType == STRUCTURE_EXTENSION ||
       structure.structureType == STRUCTURE_LINK) && structure.energy < structure.energyCapacity) ||
-      ((structure.structureType == STRUCTURE_STORAGE ||
-        structure.structureType == STRUCTURE_CONTAINER) && _.sum(structure.store) < structure.storeCapacity) ||
+      ((structure.structureType == STRUCTURE_STORAGE) && _.sum(structure.store) < structure.storeCapacity) ||
       (structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity * 0.75)
   });
   return deposit
@@ -391,7 +474,7 @@ function getDepositNextToController(room: Room, notFilled: boolean): Structure[]
   if (room.controller == null)
     return [];
   let deposits = room.controller.pos.findInRange(FIND_STRUCTURES, 3, {
-    filter: (structure: any) => ((structure.structureType == STRUCTURE_CONTAINER) && (!notFilled || (notFilled &&_.sum(structure.store) < structure.storeCapacity)))
+    filter: (structure: any) => ((structure.structureType == STRUCTURE_CONTAINER) && (!notFilled || (notFilled &&_.sum(structure.store) < structure.storeCapacity * 0.75)))
   });
   return deposits;
 }
@@ -403,19 +486,23 @@ function getClosestStructureToRepair(pos: RoomPosition, damageProportion: number
   return structure;
 }
 
-function getClosestEnemy(cannon: Cannon): Creep | null {
-  let enemy = cannon.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-  return enemy;
-}
+//function getStorage(pos: RoomPosition): StructureStorage | null{
+//  let structure = pos.findClosestByPath(FIND_STRUCTURES, { filter: (structure) => structure.structureType == STRUCTURE_STORAGE });
+//  return structure instanceof StructureStorage ? structure : null;;
+//}
 
-function getmyRoomsWithController(): Room[] {
-  var mySpawns = Object.getOwnPropertyNames(Game.spawns)
-  var roomsWithSpawns = []
-  for (var i = 0; i < mySpawns.length; i++) {
-    roomsWithSpawns.push(Game.spawns[mySpawns[i]].room)
+function getClosestEnemy(fromThis: Cannon | Probe | Room): Creep | null {
+  let enemy: Creep | null;
+  if (fromThis instanceof Cannon) {
+    enemy = fromThis.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
   }
-
-  return roomsWithSpawns;
+  else if (fromThis instanceof Probe) {
+    enemy = fromThis.pos.findClosestByPath(FIND_HOSTILE_CREEPS);
+  }
+  else {
+    enemy = fromThis.find(FIND_HOSTILE_CREEPS)[0];
+  }
+  return enemy;
 }
 
 function spawnLongDistanceHarvester(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean {
@@ -480,3 +567,31 @@ function spawnClaimer(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean 
   }
   return false;
 }
+
+function spawnSoldier(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean {
+  for (let i = 0; i < roomsToHarvest.length; i++) {
+    let roomToHarvest = Game.rooms[roomsToHarvest[i]];
+    if (!roomToHarvest)//If room not visible don't create any soldiers
+      continue;
+    let probeSetupSoldier = new ProbeSetup({ ordered: true, prefix: [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH], pattern: [ATTACK, MOVE], sizeLimit: 5 }, "soldier-" + Game.time, { role: "soldier", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
+    let soldiers = Nexus.getProbes("soldier", roomsToHarvest[i], true);
+    let energyToUse = 700;//5 TOUGH - 5 Attack - 5 Move = 700
+    let enemyInRoom = getClosestEnemy(roomToHarvest);
+
+    if (soldiers.length >= 1 || roomToSpawnFrom.energyAvailable < energyToUse || enemyInRoom == undefined)
+      continue;
+    
+    Nexus.spawnCreep(probeSetupSoldier, roomToSpawnFrom, energyToUse);
+    return true;
+  }
+  return false;
+}
+
+//MOVE	    50	Moves the creep. Reduces creep fatigue by 2/tick. See movement.
+//WORK	    100	Harvests energy from target source. Gathers 2 energy/tick. Constructs a target structure. Builds the designated structure at a construction site, at 5 points/tick, consuming 1 energy/point. See building Costs. Repairs a target structure. Repairs a structure for 20 hits/tick. Consumes 0.1 energy/hit repaired, rounded up to the nearest whole number.
+//CARRY	    50	Stores energy. Contains up to 50 energy units. Weighs nothing when empty.
+//ATTACK	80	Attacks a target creep/structure. Deals 30 damage/tick. Short-ranged attack (1 tile).
+//RANGED_ATTACK	150	Attacks a target creep/structure. Deals 10 damage/tick. Long-ranged attack (1 to 3 tiles).
+//HEAL	    250	Heals a target creep. Restores 12 hit points/tick at short range (1 tile) or 4 hits/tick at a distance (up to 3 tiles).
+//TOUGH	    10	No effect other than the 100 hit points all body parts add. This provides a cheap way to add hit points to a creep.
+//CLAIM	    600

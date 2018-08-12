@@ -4,21 +4,12 @@
 interface CreepMemory {
   name: string;
   role: string;
-  roleString: string;
-  log: boolean;
   isGathering: boolean;
-  assignedMineTaskId?: number;
-  assignedContainerId?: string;
-  assignedTargetId?: string;
+  targetId: string;
   isWorking: boolean;
-  repairTargetId?: string;
   remote: string;
   homeName: string;
 }
-
-
-
-
 
 interface Memory {
   uuid: number;

@@ -56,6 +56,7 @@ export class Probe {
     if (result == ERR_NOT_IN_RANGE) {
       this.goTo(structure.pos);
     }
+    this.memory.targetId = structure.id;
     return result;
   }
 
@@ -64,6 +65,7 @@ export class Probe {
     if (result == ERR_NOT_IN_RANGE) {
       this.goTo(structure.pos);
     }
+    this.memory.targetId = structure.id;
     return result;
   }
 
@@ -72,6 +74,7 @@ export class Probe {
     if (result == ERR_NOT_IN_RANGE) {
       this.goTo(source.pos);
     }
+    this.memory.targetId = source.id;
     return result;
   }
 
@@ -85,6 +88,7 @@ export class Probe {
     if (result == ERR_NOT_IN_RANGE) {
       this.goTo(target.pos);
     }
+    this.memory.targetId = target.id;
     return result;
   }
 
@@ -93,6 +97,7 @@ export class Probe {
     if (result == ERR_NOT_IN_RANGE) {
       this.goTo(target.pos);
     }
+    this.memory.targetId = target.id;
     return result;
   }
 
@@ -101,6 +106,7 @@ export class Probe {
     if (result == ERR_NOT_IN_RANGE) {
       this.goTo(controller.pos);
     }
+    this.memory.targetId = controller.id;
     return result;
   }
 
@@ -109,6 +115,16 @@ export class Probe {
     if (result == ERR_NOT_IN_RANGE) {
       this.goTo(controller.pos);
     }
+    this.memory.targetId = controller.id;
+    return result;
+  }
+
+  attack(creep: Creep) {
+    let result = this.creep.attack(creep);
+    if (result == ERR_NOT_IN_RANGE) {
+      this.goTo(creep.pos);
+    }
+    this.memory.targetId = creep.id;
     return result;
   }
 
