@@ -31,6 +31,18 @@ export class ProbeSetup {
     this.memory = memory;
   }
 
+  replaceBodySetup(bodySetup = {}) {
+    _.defaults(bodySetup, {
+      pattern: [],
+      sizeLimit: Infinity,
+      prefix: [],
+      suffix: [],
+      proportionalPrefixSuffix: false,
+      ordered: true,
+    });
+    this.bodySetup = bodySetup as bodySetup;
+  }
+
   generateBody(availableEnergy: number): BodyPartConstant[] {
     let patternCost, patternLength, numRepeats: number;
     let prefix = this.bodySetup.prefix;
