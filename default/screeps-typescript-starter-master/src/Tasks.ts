@@ -1,7 +1,11 @@
 
 export class Tasks {
   public static getRoomsToHarvest(): string[] {
-    return ["W7N3", "W8N2", "W7N2"];
+    return ["W7N3", "W8N2", "W7N2", "W6N1"];
+  }
+
+  public static getRoomsToClaim(): string[] {
+    return ["W6N1"];
   }
 
   public static getmyRoomsWithController(): Room[] {

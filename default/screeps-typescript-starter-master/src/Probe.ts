@@ -123,6 +123,16 @@ export class Probe {
     return result;
   }
 
+  claim(controller: StructureController) {
+    let result = this.creep.claimController(controller);
+    console.log(result);
+    if (result == ERR_NOT_IN_RANGE) {
+      this.goTo(controller.pos);
+    }
+    this.memory.targetId = controller.id;
+    return result;
+  }
+
   attack(creep: Creep) {
     let result = this.creep.attack(creep);
     if (result == ERR_NOT_IN_RANGE) {

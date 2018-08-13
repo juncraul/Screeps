@@ -102,7 +102,19 @@ export const layout: BaseLayout = {
             y: 19
           }
         ]
-      }
+      },
+      "road": {
+        pos: [
+        ]
+      },
+      "wall": {
+        pos: [
+        ]
+      },
+      "rampart": {
+        pos: [
+        ]
+      },
     }
   }
 }

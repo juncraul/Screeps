@@ -92,7 +92,12 @@ function harvesterLogic(probe: Probe): void {
   } else {
     let source = getClosestActiveSourceDivided(probe);
     if (source) {
-      probe.harvest(source);
+      let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
+      if (containerNextToSource && JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+        probe.goTo(containerNextToSource.pos);
+      } else {
+        probe.harvest(source);
+      }
     }
   }
 }
@@ -114,13 +119,18 @@ function upgraderLogic(probe: Probe): void {
     }
   }
   if (probe.memory.isGathering) {
-    let deposit = getClosestFilledDeposit(probe, false);
+    let deposit = getClosestFilledDeposit(probe, false, 0);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
       let source = getClosestActiveSourceDivided(probe);
       if (source) {
-        probe.harvest(source);
+        let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
+        if (containerNextToSource && JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+          probe.goTo(containerNextToSource.pos);
+        } else {
+          probe.harvest(source);
+        }
       }
     }
   }
@@ -143,13 +153,18 @@ function builderLogic(probe: Probe): void {
     }
   }
   if (probe.memory.isGathering) {
-    let deposit = getClosestFilledDeposit(probe, false);
+    let deposit = getClosestFilledDeposit(probe, false, 100);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
       let source = getClosestActiveSourceDivided(probe);
       if (source) {
-        probe.harvest(source);
+        let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
+        if (containerNextToSource && JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+          probe.goTo(containerNextToSource.pos);
+        } else {
+          probe.harvest(source);
+        }
       }
     }
   }
@@ -183,7 +198,7 @@ function carrierLogic(probe: Probe): void {
     }
   }
   if (probe.memory.isGathering) {
-    let deposit = getClosestFilledDeposit(probe, true);
+    let deposit = getClosestFilledDeposit(probe, true, 200);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     }
@@ -207,13 +222,18 @@ function repairerLogic(probe: Probe): void {
     }
   }
   if (probe.memory.isGathering) {
-    let deposit = getClosestFilledDeposit(probe, false);
+    let deposit = getClosestFilledDeposit(probe, false, 100);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
       let source = getClosestActiveSourceDivided(probe);
       if (source) {
-        probe.harvest(source);
+        let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
+        if (containerNextToSource && JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+          probe.goTo(containerNextToSource.pos);
+        } else {
+          probe.harvest(source);
+        }
       }
     }
   }
@@ -272,7 +292,12 @@ function longDistanceHarvesterLogic(probe: Probe): void {
     {
       let source = getClosestActiveSourceDivided(probe);
       if (source) {
-        probe.harvest(source);
+        let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
+        if (containerNextToSource && JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+          probe.goTo(containerNextToSource.pos);
+        } else {
+          probe.harvest(source);
+        }
       }
     }
   }
@@ -297,9 +322,15 @@ function longDistanceCarrierLogic(probe: Probe): void {
         probe.pickup(droppedResource);
       }
       else {
-        let deposit = getClosestFilledDeposit(probe, true);
+        let deposit = getClosestFilledDeposit(probe, true, probe.carryCapacity - _.sum(probe.carry));
         if (deposit) {
           probe.withdraw(deposit, RESOURCE_ENERGY);
+        }
+        else {
+          let deposit = getClosestFilledDeposit(probe, true, 0);
+          if (deposit) {
+            probe.withdraw(deposit, RESOURCE_ENERGY);
+          }
         }
       }
     }
@@ -354,13 +385,18 @@ function longDistanceBuilderLogic(probe: Probe): void {
       }
     }
     if (probe.memory.isGathering) {
-      let deposit = getClosestFilledDeposit(probe, false);
+      let deposit = getClosestFilledDeposit(probe, false, 100);
       if (deposit) {
         probe.withdraw(deposit, RESOURCE_ENERGY);
       } else {
         let source = getClosestActiveSourceDivided(probe);
         if (source) {
-          probe.harvest(source);
+          let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
+          if (containerNextToSource && JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+            probe.goTo(containerNextToSource.pos);
+          } else {
+            probe.harvest(source);
+          }
         }
       }
     }
@@ -392,7 +428,11 @@ function claimerLogic(probe: Probe): void {
   } else {
     let controller = getController(probe);
     if (controller) {
-      probe.reserve(controller);
+      if (Tasks.getRoomsToClaim().includes(probe.room.name)) {
+        probe.claim(controller);
+      } else {
+        probe.reserve(controller);
+      }
     }
   }
 }
@@ -472,12 +512,11 @@ function getClosestEmptyDeposit(probe: Probe): Structure | null {
   return deposit;
 }
 
-function getClosestFilledDeposit(probe: Probe, excludeControllerDeposit: boolean//, resource: ResourceConstant = RESOURCE_ENERGY
-): Structure | null {
+function getClosestFilledDeposit(probe: Probe, excludeControllerDeposit: boolean, whenIsMoreThan: number): Structure | null {
   let controllerDeposits = getDepositNextToController(probe.room, false);
   let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
     filter: structure =>
-      ((structure.structureType == STRUCTURE_CONTAINER) && structure.store[RESOURCE_ENERGY] > 0
+      ((structure.structureType == STRUCTURE_CONTAINER) && structure.store[RESOURCE_ENERGY] > whenIsMoreThan
         && (!excludeControllerDeposit || (excludeControllerDeposit && !controllerDeposits.includes(structure))))
   })
   return deposit;
@@ -584,6 +623,18 @@ function getClosestEnemy(fromThis: Cannon | Probe | Room): Creep | null {
   return enemy;
 }
 
+function getStructuresInRangeOf(roomPosition: RoomPosition, structureToLookFor: StructureConstant, range: number): Structure[] {
+  let structures = roomPosition.findInRange(FIND_STRUCTURES, range);
+  let structuresFiltered: Structure[];
+  structuresFiltered = [];
+  structures.forEach(function (structure) {
+    if (structure.structureType == structureToLookFor) {
+      structuresFiltered.push(structure);
+    }
+  })
+  return structuresFiltered;
+}
+
 function spawnHarvester(roomToSpawnFrom: Room): boolean {
   let probeSetupHarvester = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "harvester-" + Game.time, { role: "harvester" });
   let probeSetupHarvesterElite = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE], sizeLimit: 6 }, "harvester-" + Game.time, { role: "harvester" });
@@ -645,7 +696,7 @@ function spawnLongDistanceCarrier(roomToSpawnFrom: Room, roomsToHarvest: string[
       probeSetupLongDistanceCarrier.replaceBodySetup(bodySetupMedium);
     }
 
-    if (carriers.length > containers || roomToSpawnFrom.energyAvailable < energyToUse)
+    if (carriers.length >= containers || roomToSpawnFrom.energyAvailable < energyToUse || Tasks.getRoomsToClaim().includes(roomToHarvest.name))
       continue;
 
     Nexus.spawnCreep(probeSetupLongDistanceCarrier, roomToSpawnFrom, energyToUse);
@@ -692,6 +743,9 @@ function spawnClaimer(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean 
     if (controller.reservation) {
       if (controller.reservation.ticksToEnd > 3000)
         continue;
+    }
+    if (controller.owner) {
+      continue;
     }
 
     Nexus.spawnCreep(probeSetupClaimer, roomToSpawnFrom, energyToUse);
