@@ -56,6 +56,7 @@ export class Probe {
     if (result == ERR_NOT_IN_RANGE) {
       this.goTo(structure.pos);
     }
+    this.memory.targetId = "";
     return result;
   }
 
@@ -64,6 +65,7 @@ export class Probe {
     if (result == ERR_NOT_IN_RANGE) {
       this.goTo(structure.pos);
     }
+    this.memory.targetId = "";
     return result;
   }
 

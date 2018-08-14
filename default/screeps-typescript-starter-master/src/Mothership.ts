@@ -4,6 +4,7 @@ import { ProbeSetup } from "ProbeSetup";
 import { Cannon } from "Cannon";
 import { Tasks } from "Tasks";
 import { Helper } from "Helper";
+import { Stargate } from "Stargate";
 
 export function run(): void {
   let roomsToHarvest = Tasks.getRoomsToHarvest();
@@ -44,6 +45,8 @@ export function run(): void {
     allCannons.forEach(function (cannon) {
       cannonLogic(cannon);
     })
+
+    Stargate.moveEnergyAround(room);
   })
 
   let allProbes = Nexus.getProbes();
@@ -93,8 +96,10 @@ function harvesterLogic(probe: Probe): void {
     let source = getClosestActiveSourceDivided(probe);
     if (source) {
       let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-      if (containerNextToSource && JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-        probe.goTo(containerNextToSource.pos);
+      if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
+        if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+          probe.goTo(containerNextToSource.pos);
+        }
       } else {
         probe.harvest(source);
       }
@@ -126,8 +131,10 @@ function upgraderLogic(probe: Probe): void {
       let source = getClosestActiveSourceDivided(probe);
       if (source) {
         let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-        if (containerNextToSource && JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-          probe.goTo(containerNextToSource.pos);
+        if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
+          if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+            probe.goTo(containerNextToSource.pos);
+          }
         } else {
           probe.harvest(source);
         }
@@ -160,8 +167,10 @@ function builderLogic(probe: Probe): void {
       let source = getClosestActiveSourceDivided(probe);
       if (source) {
         let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-        if (containerNextToSource && JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-          probe.goTo(containerNextToSource.pos);
+        if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
+          if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+            probe.goTo(containerNextToSource.pos);
+          }
         } else {
           probe.harvest(source);
         }
@@ -229,8 +238,10 @@ function repairerLogic(probe: Probe): void {
       let source = getClosestActiveSourceDivided(probe);
       if (source) {
         let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-        if (containerNextToSource && JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-          probe.goTo(containerNextToSource.pos);
+        if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
+          if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+            probe.goTo(containerNextToSource.pos);
+          }
         } else {
           probe.harvest(source);
         }
@@ -293,8 +304,10 @@ function longDistanceHarvesterLogic(probe: Probe): void {
       let source = getClosestActiveSourceDivided(probe);
       if (source) {
         let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-        if (containerNextToSource && JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-          probe.goTo(containerNextToSource.pos);
+        if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
+          if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+            probe.goTo(containerNextToSource.pos);
+          }
         } else {
           probe.harvest(source);
         }
@@ -392,8 +405,10 @@ function longDistanceBuilderLogic(probe: Probe): void {
         let source = getClosestActiveSourceDivided(probe);
         if (source) {
           let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-          if (containerNextToSource && JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-            probe.goTo(containerNextToSource.pos);
+          if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
+            if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+              probe.goTo(containerNextToSource.pos);
+            }
           } else {
             probe.harvest(source);
           }
@@ -516,7 +531,8 @@ function getClosestFilledDeposit(probe: Probe, excludeControllerDeposit: boolean
   let controllerDeposits = getDepositNextToController(probe.room, false);
   let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
     filter: structure =>
-      ((structure.structureType == STRUCTURE_CONTAINER) && structure.store[RESOURCE_ENERGY] > whenIsMoreThan
+      ((((structure.structureType == STRUCTURE_CONTAINER) && structure.store[RESOURCE_ENERGY] > whenIsMoreThan) ||
+        (structure.structureType == STRUCTURE_LINK && structure.energy > whenIsMoreThan))
         && (!excludeControllerDeposit || (excludeControllerDeposit && !controllerDeposits.includes(structure))))
   })
   return deposit;
@@ -559,11 +575,13 @@ function getStructureToSupplyForReproduction(probe: Probe): Structure | null  {
 }
 
 function getStructureToSupply(probe: Probe): Structure | null {
-  let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
+  let stargate = Stargate.getDestinationStargates(probe.room)[0];//Works only with one destination
+  let nono = stargate ? stargate.id: "meh";
+  let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {   //Consider using: objArray.find(function (obj) { return obj.id === 3; });
     filter: structure => ((
       structure.structureType == STRUCTURE_SPAWN ||
       structure.structureType == STRUCTURE_EXTENSION ||
-      structure.structureType == STRUCTURE_LINK) && structure.energy < structure.energyCapacity) ||
+      structure.structureType == STRUCTURE_LINK) && structure.energy < structure.energyCapacity && structure.id != nono) ||
       ((structure.structureType == STRUCTURE_STORAGE) && _.sum(structure.store) < structure.storeCapacity) ||
       (structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity * 0.75)
   });
@@ -586,7 +604,7 @@ function getStructureToSupplyByRemoteWorkers(probe: Probe): Structure | null {
 function getDepositNextToController(room: Room, notFilled: boolean): Structure[] {
   if (room.controller == null)
     return [];
-  let deposits = room.controller.pos.findInRange(FIND_STRUCTURES, 3, {
+  let deposits = room.controller.pos.findInRange(FIND_STRUCTURES, 4, {
     filter: (structure: any) => ((structure.structureType == STRUCTURE_CONTAINER) && (!notFilled || (notFilled &&_.sum(structure.store) < structure.storeCapacity * 0.75)))
   });
   return deposits;
@@ -636,18 +654,39 @@ function getStructuresInRangeOf(roomPosition: RoomPosition, structureToLookFor: 
 }
 
 function spawnHarvester(roomToSpawnFrom: Room): boolean {
-  let probeSetupHarvester = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "harvester-" + Game.time, { role: "harvester" });
+  let probeSetupHarvester: ProbeSetup;
+  let probeSetupHarvesterOne = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 1 }, "harvester-" + Game.time, { role: "harvester" });
+  let probeSetupHarvesterTwo = new ProbeSetup({ ordered: true, pattern: [WORK, WORK, CARRY], suffix: [MOVE], sizeLimit: 2 }, "harvester-" + Game.time, { role: "harvester" });
+  let probeSetupHarvesterThree = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "harvester-" + Game.time, { role: "harvester" });
   let probeSetupHarvesterElite = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE], sizeLimit: 6 }, "harvester-" + Game.time, { role: "harvester" });
   let harvesters = Nexus.getProbes("harvester", roomToSpawnFrom.name);
+  let longDistanceHarvesters = Nexus.getProbes("longDistanceHarvester", roomToSpawnFrom.name, true);
   let harvestersAboutToDie = _.filter(harvesters, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 50);
   let sources = roomToSpawnFrom.find(FIND_SOURCES).length;
   let controller = getController(roomToSpawnFrom);
-  let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(harvesters, WORK);
-  let energyToUse = 600;//3 Work - 3 Move - 3 Carry = 600
+  let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(harvesters, WORK) + Probe.getActiveBodyPartsFromArrayOfProbes(longDistanceHarvesters, WORK);
+  let energyToUse = 600;//3 Work - 3 Carry - 3 Carry = 600
 
-  if (controller && controller.level >= 4) {
-    energyToUse = 700//6 Work - 1 Carry - 1 Move = 700
-    probeSetupHarvester = probeSetupHarvesterElite;
+  if (!controller) {
+    return false;
+  }
+  switch (controller.level) {
+    case 1://300 Energy avilable
+      energyToUse = 200;//1 Work; 1 Carry; 1 Move
+      probeSetupHarvester = probeSetupHarvesterOne;
+      break;
+    case 2://550 Energy available
+      energyToUse = 550;//4 Work; 2 Carry; 1 Move
+      probeSetupHarvester = probeSetupHarvesterTwo;
+      break;
+    case 3:
+      energyToUse = 600;//3 Work; 3 Carry; 3 Move
+      probeSetupHarvester = probeSetupHarvesterThree;
+      break;
+    default:
+      energyToUse = 700//6 Work - 1 Carry - 1 Move = 700
+      probeSetupHarvester = probeSetupHarvesterElite;
+      break;
   }
 
   if (workBodyParts >= sources * 6 || roomToSpawnFrom.energyAvailable < energyToUse) {
