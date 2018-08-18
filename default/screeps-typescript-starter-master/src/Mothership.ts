@@ -10,7 +10,6 @@ export function run(): void {
   let roomsToHarvest = Tasks.getRoomsToHarvest();
   let probeSetupUpgrader = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "upgrader-" + Game.time, { role: "upgrader" });
   let probeSetupBuilder = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "builder-" + Game.time, { role: "builder" });
-  let probeSetupCarrier = new ProbeSetup({ ordered: true, pattern: [CARRY, CARRY, MOVE], sizeLimit: 3 }, "carrier-" + Game.time, { role: "carrier" });
   let probeSetupRepairer = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "repairer-" + Game.time, { role: "repairer" });
 
   let myRooms = Tasks.getmyRoomsWithController();
@@ -21,23 +20,35 @@ export function run(): void {
 
     if (spawnHarvester(room)) {
       console.log(room.name + " Spawning Harvester");
-    } else if (Nexus.getProbes("upgrader", room.name).length < 2) {
+    }
+    else if (spawnCarrier(room)) {
+      console.log(room.name + " Spawning Carrier");
+    }
+    else if (spawnSoldierForConqueredRoom(room)) {
+      console.log(room.name + " Spawning soldier for this room.");
+    }
+    else if (Nexus.getProbes("upgrader", room.name).length < 2) {
       Nexus.spawnCreep(probeSetupUpgrader, structureSpawn, energyCapacityRoom);
-    } else if (Nexus.getProbes("builder", room.name).length < 2 && getConstructionSitesFromRoom(room).length > 0) {
+    }
+    else if (Nexus.getProbes("builder", room.name).length < 2 && getConstructionSitesFromRoom(room).length > 0) {
       Nexus.spawnCreep(probeSetupBuilder, structureSpawn, energyCapacityRoom);
-    } else if (Nexus.getProbes("carrier", room.name).length < 2) {
-      Nexus.spawnCreep(probeSetupCarrier, structureSpawn, energyCapacityRoom);
-    } else if (Nexus.getProbes("repairer", room.name).length < 1 && getClosestStructureToRepair(structureSpawn.pos, 0.7) != null) {
+    }
+    else if (Nexus.getProbes("repairer", room.name).length < 1 && getClosestStructureToRepair(structureSpawn.pos, 0.7) != null) {
       Nexus.spawnCreep(probeSetupRepairer, structureSpawn, energyCapacityRoom);
-    } else if (spawnSoldier(room, roomsToHarvest)) {
+    }
+    else if (spawnSoldier(room, roomsToHarvest)) {
       console.log(room.name + " Spawning soldier.");
-    } else if (spawnLongDistanceHarvester(room, roomsToHarvest)) {
+    }
+    else if (spawnLongDistanceHarvester(room, roomsToHarvest)) {
       console.log(room.name + " Spawning long distance harvester.");
-    } else if (spawnLongDistanceCarrier(room, roomsToHarvest)) {
+    }
+    else if (spawnLongDistanceCarrier(room, roomsToHarvest)) {
       console.log(room.name + " Spawning long distance carrier.");
-    } else if (spawnClaimer(room, roomsToHarvest)) {
+    }
+    else if (spawnClaimer(room, roomsToHarvest)) {
       console.log(room.name + " Spawning claimer.");
-    } else if (spawnLongDistanceBuilder(room, roomsToHarvest)) {
+    }
+    else if (spawnLongDistanceBuilder(room, roomsToHarvest)) {
       console.log(room.name + " Spawning long distance builder.");
     }
 
@@ -424,14 +435,20 @@ function cannonLogic(cannon: Cannon): void {
     cannon.attack(enemy);
   }
   else {
-    let structure = getClosestStructureToRepair(cannon.pos, 0.7);//TODO: Use closest by range
-    if (structure) {
-      cannon.repair(structure);
+    let damagedUnit = getClosestDamagedUnit(cannon);
+    if (damagedUnit) {
+      cannon.heal(damagedUnit);
     }
-    else {
-      let structure = getClosestStructureToRepair(cannon.pos, 1);
+    else if (cannon.energy > cannon.energyCapacity * 0.5) {
+      let structure = getClosestStructureToRepair(cannon.pos, 0.7);//TODO: Use closest by range
       if (structure) {
         cannon.repair(structure);
+      }
+      else {
+        let structure = getClosestStructureToRepair(cannon.pos, 1);
+        if (structure) {
+          cannon.repair(structure);
+        }
       }
     }
   }
@@ -641,6 +658,16 @@ function getClosestEnemy(fromThis: Cannon | Probe | Room): Creep | null {
   return enemy;
 }
 
+function getClosestDamagedUnit(fromThis: Cannon | Probe): Creep | null {
+  let damagedUnit: Creep | null;
+  if (fromThis instanceof Cannon) {
+    damagedUnit = fromThis.pos.findClosestByRange(FIND_MY_CREEPS, { filter: (creep) => creep.hits < creep.hitsMax })
+  } else {
+    damagedUnit = fromThis.pos.findClosestByPath(FIND_MY_CREEPS, { filter: (creep) => creep.hits < creep.hitsMax })
+  }
+  return damagedUnit;
+}
+
 function getStructuresInRangeOf(roomPosition: RoomPosition, structureToLookFor: StructureConstant, range: number): Structure[] {
   let structures = roomPosition.findInRange(FIND_STRUCTURES, range);
   let structuresFiltered: Structure[];
@@ -660,12 +687,13 @@ function spawnHarvester(roomToSpawnFrom: Room): boolean {
   let probeSetupHarvesterThree = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "harvester-" + Game.time, { role: "harvester" });
   let probeSetupHarvesterElite = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE], sizeLimit: 6 }, "harvester-" + Game.time, { role: "harvester" });
   let harvesters = Nexus.getProbes("harvester", roomToSpawnFrom.name);
+  let carriers = Nexus.getProbes("carrier", roomToSpawnFrom.name);
   let longDistanceHarvesters = Nexus.getProbes("longDistanceHarvester", roomToSpawnFrom.name, true);
   let harvestersAboutToDie = _.filter(harvesters, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 50);
   let sources = roomToSpawnFrom.find(FIND_SOURCES).length;
   let controller = getController(roomToSpawnFrom);
   let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(harvesters, WORK) + Probe.getActiveBodyPartsFromArrayOfProbes(longDistanceHarvesters, WORK);
-  let energyToUse = 600;//3 Work - 3 Carry - 3 Carry = 600
+  let energyToUse: number;
 
   if (!controller) {
     return false;
@@ -684,18 +712,81 @@ function spawnHarvester(roomToSpawnFrom: Room): boolean {
       probeSetupHarvester = probeSetupHarvesterThree;
       break;
     default:
-      energyToUse = 700//6 Work - 1 Carry - 1 Move = 700
+      energyToUse = 700//6 Work; 1 Carry; 1 Move
       probeSetupHarvester = probeSetupHarvesterElite;
       break;
   }
 
-  if (workBodyParts >= sources * 6 || roomToSpawnFrom.energyAvailable < energyToUse) {
+  //Emergency situation with no carriers and we don't have energy to build the latest harvester. Quickly build 2 low harvesters.
+  if (carriers.length == 0 && roomToSpawnFrom.energyAvailable < energyToUse && harvesters.length < 2) {
+    energyToUse = 200;//1 Work; 1 Carry; 1 Move
+    probeSetupHarvester = probeSetupHarvesterOne;
+  }
+
+  if (roomToSpawnFrom.energyAvailable < energyToUse) {
+    return false;
+  }
+
+  if (workBodyParts >= sources * 6) {
     if (harvestersAboutToDie.length == 0 || (harvestersAboutToDie.length > 0 && workBodyParts >= (sources + 1) * 6)) {
       return false;
     }
   }
 
   Nexus.spawnCreep(probeSetupHarvester, roomToSpawnFrom, energyToUse);
+  return true;
+}
+
+function spawnCarrier(roomToSpawnFrom: Room): boolean {
+  let probeSetupCarrier: ProbeSetup;
+  let probeSetupCarrierOne = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 1 }, "carrier-" + Game.time, { role: "carrier" });
+  let probeSetupCarrierTwo = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 2 }, "carrier-" + Game.time, { role: "carrier" });
+  let probeSetupCarrierThree = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 5 }, "carrier-" + Game.time, { role: "carrier" });
+  let probeSetupCarrierElite = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 10 }, "carrier-" + Game.time, { role: "carrier" });
+  let carriers = Nexus.getProbes("carrier", roomToSpawnFrom.name);
+  let carriersAboutToDie = _.filter(carriers, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 50);
+  let controller = getController(roomToSpawnFrom);
+  let energyToUse: number;
+
+  if (!controller) {
+    return false;
+  }
+  switch (controller.level) {
+    case 1://300 Energy avilable
+      energyToUse = 100;//1 Carry; 1 Move
+      probeSetupCarrier = probeSetupCarrierOne;
+      break;
+    case 2://550 Energy available
+      energyToUse = 200;//2 Carry; 2 Move
+      probeSetupCarrier = probeSetupCarrierTwo;
+      break;
+    case 3:
+      energyToUse = 500;//5 Carry; 5 Move
+      probeSetupCarrier = probeSetupCarrierThree;
+      break;
+    default:
+      energyToUse = 1000//10 Carry; 10 Move
+      probeSetupCarrier = probeSetupCarrierElite;
+      break;
+  }
+
+  //Emergency situation with no carriers. Quickly build a low carrier
+  if (carriers.length == 0 && roomToSpawnFrom.energyAvailable < energyToUse) {
+    energyToUse = 100;//1 Carry; 1 Move
+    probeSetupCarrier = probeSetupCarrierOne;
+  }
+
+  if (roomToSpawnFrom.energyAvailable < energyToUse) {
+    return false;
+  }
+
+  if (carriers.length >= 2) {
+    if (carriersAboutToDie.length == 0 || (carriersAboutToDie.length > 0 && carriers.length >= 3)) {
+      return false;
+    }
+  }
+
+  Nexus.spawnCreep(probeSetupCarrier, roomToSpawnFrom, energyToUse);
   return true;
 }
 
@@ -810,6 +901,22 @@ function spawnSoldier(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean 
     return true;
   }
   return false;
+}
+
+function spawnSoldierForConqueredRoom(roomToSpawnFrom: Room): boolean {
+  let cannons = Nexus.getCannons(roomToSpawnFrom);
+  if (cannons.length != 0)
+    return false;
+  let probeSetupSoldier = new ProbeSetup({ ordered: true, pattern: [TOUGH], suffix: [ATTACK, MOVE], sizeLimit: 10 }, "soldier-" + Game.time, { role: "soldier", remote: roomToSpawnFrom.name, homeName: roomToSpawnFrom.name });
+  let soldiers = Nexus.getProbes("soldier", roomToSpawnFrom.name, true);
+  let energyToUse = 230;//10 TOUGH - 1 Attack - 1 Move = 230
+  let enemyInRoom = getClosestEnemy(roomToSpawnFrom);
+
+  if (soldiers.length >= 1 || roomToSpawnFrom.energyAvailable < energyToUse || enemyInRoom == undefined)
+    return false;
+
+  Nexus.spawnCreep(probeSetupSoldier, roomToSpawnFrom, energyToUse);
+  return true;
 }
 
 //MOVE	    50	Moves the creep. Reduces creep fatigue by 2/tick. See movement.

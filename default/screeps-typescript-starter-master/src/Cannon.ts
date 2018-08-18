@@ -17,6 +17,11 @@ export class Cannon {
     return result;
   }
 
+  heal(creep: Creep) {
+    let result = this.tower.heal(creep);
+    return result;
+  }
+
   attack(creep: Creep) {
     let result = this.tower.attack(creep);
     return result;
