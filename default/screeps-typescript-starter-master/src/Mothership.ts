@@ -135,7 +135,7 @@ function upgraderLogic(probe: Probe): void {
     }
   }
   if (probe.memory.isGathering) {
-    let deposit = getClosestFilledDeposit(probe, false, 0);
+    let deposit = getClosestFilledDeposit(probe, false, 300);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
@@ -171,7 +171,7 @@ function builderLogic(probe: Probe): void {
     }
   }
   if (probe.memory.isGathering) {
-    let deposit = getClosestFilledDeposit(probe, false, 100);
+    let deposit = getClosestFilledDeposit(probe, false, 300);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
@@ -200,19 +200,25 @@ function carrierLogic(probe: Probe): void {
     probe.memory.isGathering = true;
   }
   if (probe.memory.isWorking) {
-    let supply = getStructureToSupplyForReproduction(probe);
+    let supply = getStructureToSupplyPriority(probe);
     if (supply) {
       probe.transfer(supply, RESOURCE_ENERGY);
     }
     else {
-      let supplyControllerDeposit = getDepositNextToController(probe.room, true);
-      if (supplyControllerDeposit.length > 0) {
-        probe.transfer(supplyControllerDeposit[0], RESOURCE_ENERGY);
+      let supply = getStructureToSupplyForReproduction(probe);
+      if (supply) {
+        probe.transfer(supply, RESOURCE_ENERGY);
       }
       else {
-        let differentOtherStucture = getStructureToSupply(probe);
-        if (differentOtherStucture) {
-          probe.transfer(differentOtherStucture, RESOURCE_ENERGY);
+        let supplyControllerDeposit = getDepositNextToController(probe.room, true);
+        if (supplyControllerDeposit.length > 0) {
+          probe.transfer(supplyControllerDeposit[0], RESOURCE_ENERGY);
+        }
+        else {
+          let differentOtherStucture = getStructureToSupply(probe);
+          if (differentOtherStucture) {
+            probe.transfer(differentOtherStucture, RESOURCE_ENERGY);
+          }
         }
       }
     }
@@ -221,6 +227,9 @@ function carrierLogic(probe: Probe): void {
     let deposit = getClosestFilledDeposit(probe, true, 200);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
+    } else if (_.sum(probe.carry) > 0) {//Instead of waiting for a deposit to fill up, just return back what it currenlty has.
+      probe.memory.isWorking = true;
+      probe.memory.isGathering = false;
     }
   }
 }
@@ -242,7 +251,7 @@ function repairerLogic(probe: Probe): void {
     }
   }
   if (probe.memory.isGathering) {
-    let deposit = getClosestFilledDeposit(probe, false, 100);
+    let deposit = getClosestFilledDeposit(probe, false, 300);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
@@ -597,11 +606,19 @@ function getStructureToSupply(probe: Probe): Structure | null {
   let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {   //Consider using: objArray.find(function (obj) { return obj.id === 3; });
     filter: structure => ((
       structure.structureType == STRUCTURE_SPAWN ||
-      structure.structureType == STRUCTURE_EXTENSION ||
-      structure.structureType == STRUCTURE_LINK) && structure.energy < structure.energyCapacity && structure.id != nono) ||
-      ((structure.structureType == STRUCTURE_STORAGE) && _.sum(structure.store) < structure.storeCapacity) ||
+      structure.structureType == STRUCTURE_EXTENSION) && structure.energy < structure.energyCapacity && structure.id != nono) ||
+      ((structure.structureType == STRUCTURE_STORAGE ||
+        structure.structureType == STRUCTURE_TERMINAL) && _.sum(structure.store) < structure.storeCapacity) ||
       (structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity * 0.75)
   });
+  return deposit
+}
+
+function getStructureToSupplyPriority(probe: Probe): Structure | null {
+  let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, { 
+    filter: structure => (
+      (structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity * 0.45)
+  )});
   return deposit
 }
 
@@ -612,7 +629,8 @@ function getStructureToSupplyByRemoteWorkers(probe: Probe): Structure | null {
       structure.structureType == STRUCTURE_EXTENSION ||
       structure.structureType == STRUCTURE_LINK) && structure.energy < structure.energyCapacity) ||
       ((structure.structureType == STRUCTURE_STORAGE ||
-        structure.structureType == STRUCTURE_CONTAINER) && _.sum(structure.store) < structure.storeCapacity) ||
+        structure.structureType == STRUCTURE_CONTAINER ||
+        structure.structureType == STRUCTURE_TERMINAL) && _.sum(structure.store) < structure.storeCapacity) ||
       (structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity * 0.75)
   });
   return deposit
@@ -683,17 +701,18 @@ function getStructuresInRangeOf(roomPosition: RoomPosition, structureToLookFor: 
 function spawnHarvester(roomToSpawnFrom: Room): boolean {
   let probeSetupHarvester: ProbeSetup;
   let probeSetupHarvesterOne = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 1 }, "harvester-" + Game.time, { role: "harvester" });
-  let probeSetupHarvesterTwo = new ProbeSetup({ ordered: true, pattern: [WORK, WORK, CARRY], suffix: [MOVE], sizeLimit: 2 }, "harvester-" + Game.time, { role: "harvester" });
-  let probeSetupHarvesterThree = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "harvester-" + Game.time, { role: "harvester" });
+  let probeSetupHarvesterTwo = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE], sizeLimit: 3 }, "harvester-" + Game.time, { role: "harvester" });
+  let probeSetupHarvesterThree = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE], sizeLimit: 5 }, "harvester-" + Game.time, { role: "harvester" });
   let probeSetupHarvesterElite = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE], sizeLimit: 6 }, "harvester-" + Game.time, { role: "harvester" });
   let harvesters = Nexus.getProbes("harvester", roomToSpawnFrom.name);
   let carriers = Nexus.getProbes("carrier", roomToSpawnFrom.name);
   let longDistanceHarvesters = Nexus.getProbes("longDistanceHarvester", roomToSpawnFrom.name, true);
-  let harvestersAboutToDie = _.filter(harvesters, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 50);
+  let harvestersAboutToDie = _.filter(harvesters, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
   let sources = roomToSpawnFrom.find(FIND_SOURCES).length;
   let controller = getController(roomToSpawnFrom);
   let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(harvesters, WORK) + Probe.getActiveBodyPartsFromArrayOfProbes(longDistanceHarvesters, WORK);
   let energyToUse: number;
+  let bodyPartsPerSourceRequired = carriers.length <= 1 ? 2 : 6;//Set Harvester at full capacity only if there are enough carriers to sustain them
 
   if (!controller) {
     return false;
@@ -704,31 +723,45 @@ function spawnHarvester(roomToSpawnFrom: Room): boolean {
       probeSetupHarvester = probeSetupHarvesterOne;
       break;
     case 2://550 Energy available
-      energyToUse = 550;//4 Work; 2 Carry; 1 Move
+      energyToUse = 400;//3 Work; 1 Carry; 1 Move
       probeSetupHarvester = probeSetupHarvesterTwo;
       break;
-    case 3:
-      energyToUse = 600;//3 Work; 3 Carry; 3 Move
+    case 3://800 Energy available
+      energyToUse = 600;//5 Work; 1 Carry; 1 Move
       probeSetupHarvester = probeSetupHarvesterThree;
       break;
-    default:
+    default://1300 Energy at least
       energyToUse = 700//6 Work; 1 Carry; 1 Move
       probeSetupHarvester = probeSetupHarvesterElite;
       break;
   }
+  //In case when not all extensions got a chance to be built.
+  energyToUse = roomToSpawnFrom.energyCapacityAvailable < energyToUse ? roomToSpawnFrom.energyCapacityAvailable : energyToUse;
 
   //Emergency situation with no carriers and we don't have energy to build the latest harvester. Quickly build 2 low harvesters.
   if (carriers.length == 0 && roomToSpawnFrom.energyAvailable < energyToUse && harvesters.length < 2) {
     energyToUse = 200;//1 Work; 1 Carry; 1 Move
     probeSetupHarvester = probeSetupHarvesterOne;
   }
-
-  if (roomToSpawnFrom.energyAvailable < energyToUse) {
-    return false;
+  else { //Emergency situation with no harvesters and we don't have energy to build the latest harvester. Quickly build 1 low harvester.
+    if (harvesters.length == 0 && roomToSpawnFrom.energyAvailable < energyToUse) {
+      energyToUse = 200;//1 Work; 1 Carry; 1 Move
+      probeSetupHarvester = probeSetupHarvesterOne;
+    }
+    else { //Emergency situation with one weak harvesters and we don't have energy to build the latest harvester. Quickly build 1 medium harvester.
+      if (workBodyParts < 3 && roomToSpawnFrom.energyAvailable < energyToUse) {
+        energyToUse = 400;//3 Work; 1 Carry; 1 Move
+        probeSetupHarvester = probeSetupHarvesterTwo;
+      }
+    }
   }
 
-  if (workBodyParts >= sources * 6) {
-    if (harvestersAboutToDie.length == 0 || (harvestersAboutToDie.length > 0 && workBodyParts >= (sources + 1) * 6)) {
+  if (roomToSpawnFrom.energyAvailable < energyToUse) {
+    return true;
+  }
+  
+  if (workBodyParts >= sources * bodyPartsPerSourceRequired) {
+    if (harvestersAboutToDie.length == 0 || (harvestersAboutToDie.length > 0 && workBodyParts >= (sources + 1) * bodyPartsPerSourceRequired)) {
       return false;
     }
   }
@@ -744,7 +777,7 @@ function spawnCarrier(roomToSpawnFrom: Room): boolean {
   let probeSetupCarrierThree = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 5 }, "carrier-" + Game.time, { role: "carrier" });
   let probeSetupCarrierElite = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 10 }, "carrier-" + Game.time, { role: "carrier" });
   let carriers = Nexus.getProbes("carrier", roomToSpawnFrom.name);
-  let carriersAboutToDie = _.filter(carriers, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 50);
+  let carriersAboutToDie = _.filter(carriers, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
   let controller = getController(roomToSpawnFrom);
   let energyToUse: number;
 
@@ -760,15 +793,17 @@ function spawnCarrier(roomToSpawnFrom: Room): boolean {
       energyToUse = 200;//2 Carry; 2 Move
       probeSetupCarrier = probeSetupCarrierTwo;
       break;
-    case 3:
+    case 3://800 Energy available
       energyToUse = 500;//5 Carry; 5 Move
       probeSetupCarrier = probeSetupCarrierThree;
       break;
-    default:
+    default://1300 Energy at least
       energyToUse = 1000//10 Carry; 10 Move
       probeSetupCarrier = probeSetupCarrierElite;
       break;
   }
+  //In case when not all extensions got a chance to be built.
+  energyToUse = roomToSpawnFrom.energyCapacityAvailable < energyToUse ? roomToSpawnFrom.energyCapacityAvailable : energyToUse;
 
   //Emergency situation with no carriers. Quickly build a low carrier
   if (carriers.length == 0 && roomToSpawnFrom.energyAvailable < energyToUse) {
@@ -777,7 +812,7 @@ function spawnCarrier(roomToSpawnFrom: Room): boolean {
   }
 
   if (roomToSpawnFrom.energyAvailable < energyToUse) {
-    return false;
+    return true;
   }
 
   if (carriers.length >= 2) {
@@ -793,13 +828,31 @@ function spawnCarrier(roomToSpawnFrom: Room): boolean {
 function spawnLongDistanceHarvester(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean {
 
   for (let i = 0; i < roomsToHarvest.length; i++) {
+    let roomConnections = Tasks.getRoomConnections(roomToSpawnFrom);
+    if (roomConnections.length != 0 && !roomConnections.includes(roomsToHarvest[i]))
+      continue;
     let probeSetupLongDistanceHarvester = new ProbeSetup({ ordered: true, pattern: [WORK, WORK, MOVE], suffix: [MOVE, CARRY], proportionalPrefixSuffix: false, sizeLimit: 3 }, "longDistanceHarvester-" + Game.time, { role: "longDistanceHarvester", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
     let harvesters = Nexus.getProbes("longDistanceHarvester", roomsToHarvest[i], true);
     let roomToHarvest = Game.rooms[roomsToHarvest[i]];
     let sources = roomToHarvest != null ? roomToHarvest.find(FIND_SOURCES).length : 1;
     let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(harvesters, WORK);
-    let energyToUse = 850;//6 Work - 4 Move - 1 Carry = 800 would add one more move at level 4
-    //adjust for controller level 3
+    let controller = getController(roomToSpawnFrom);
+    let energyToUse: number;
+
+    if (!controller) {
+      return false;
+    }
+    switch (controller.level) {
+      case 1:
+      case 2:
+        return false;
+      case 3://800 Energy available
+        energyToUse = 600;//4 Work; 3 Move; 1 Carry
+        break;
+      default://1300 Energy at least
+        energyToUse = 850;//6 Work; 4 Move; 1 Carry
+        break;
+    }
 
     if (workBodyParts >= sources * 6  || roomToSpawnFrom.energyAvailable < energyToUse)
       continue;
@@ -812,6 +865,9 @@ function spawnLongDistanceHarvester(roomToSpawnFrom: Room, roomsToHarvest: strin
 
 function spawnLongDistanceCarrier(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean {
   for (let i = 0; i < roomsToHarvest.length; i++) {
+    let roomConnections = Tasks.getRoomConnections(roomToSpawnFrom);
+    if (roomConnections.length != 0 && !roomConnections.includes(roomsToHarvest[i]))
+      continue;
     let bodySetup = { ordered: true, pattern: [CARRY, CARRY, MOVE], sizeLimit: 5 };
     let bodySetupMedium = { ordered: true, pattern: [CARRY, CARRY, MOVE], sizeLimit: 8 };
     let probeSetupLongDistanceCarrier = new ProbeSetup(bodySetup, "longDistanceCarrier-" + Game.time, { role: "longDistanceCarrier", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
@@ -819,11 +875,22 @@ function spawnLongDistanceCarrier(roomToSpawnFrom: Room, roomsToHarvest: string[
     let roomToHarvest = Game.rooms[roomsToHarvest[i]];
     let containers = roomToHarvest != null ? roomToHarvest.find(FIND_STRUCTURES, { filter: (structure) => structure.structureType == STRUCTURE_CONTAINER }).length : 0;
     let controller = getController(roomToSpawnFrom);
-    let energyToUse = 750;//10 Carry - 5 Move = 750
-
-    if (controller && controller.level >= 4) {
-      energyToUse = 1200//16 Carry - 8 Move = 1200
-      probeSetupLongDistanceCarrier.replaceBodySetup(bodySetupMedium);
+    let energyToUse: number;
+    
+    if (!controller) {
+      return false;
+    }
+    switch (controller.level) {
+      case 1:
+      case 2:
+        return false;
+      case 3://800 Energy available
+        energyToUse = 750;//10 Carry; 5 Move
+        break;
+      default://1300 Energy at least
+        energyToUse = 1200//16 Carry; 8 Move
+        probeSetupLongDistanceCarrier.replaceBodySetup(bodySetupMedium);
+        break;
     }
 
     if (carriers.length >= containers || roomToSpawnFrom.energyAvailable < energyToUse || Tasks.getRoomsToClaim().includes(roomToHarvest.name))
@@ -838,7 +905,10 @@ function spawnLongDistanceCarrier(roomToSpawnFrom: Room, roomsToHarvest: string[
 function spawnLongDistanceBuilder(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean {
   for (let i = 0; i < roomsToHarvest.length; i++) {
     let roomToHarvest = Game.rooms[roomsToHarvest[i]];
+    let roomConnections = Tasks.getRoomConnections(roomToSpawnFrom);
     if (!roomToHarvest)
+      continue;
+    if (roomConnections.length != 0 && !roomConnections.includes(roomsToHarvest[i]))
       continue;
     let probeSetupLongDistanceBuilder = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 5 }, "longDistanceBuilder-" + Game.time, { role: "longDistanceBuilder", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
     let builders = Nexus.getProbes("longDistanceBuilder", roomsToHarvest[i], true);
@@ -860,7 +930,10 @@ function spawnClaimer(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean 
 
   for (let i = 0; i < roomsToHarvest.length; i++) {
     let roomToHarvest = Game.rooms[roomsToHarvest[i]];
+    let roomConnections = Tasks.getRoomConnections(roomToSpawnFrom);
     if (!roomToHarvest)//If room not visible don't create any claimers
+      continue;
+    if (roomConnections.length != 0 && !roomConnections.includes(roomsToHarvest[i]))
       continue;
     let probeSetupClaimer = new ProbeSetup({ ordered: true, pattern: [CLAIM, MOVE], sizeLimit: 2 }, "claimer-" + Game.time, { role: "claimer", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
     let claimers = Nexus.getProbes("claimer", roomsToHarvest[i], true);
@@ -887,7 +960,10 @@ function spawnClaimer(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean 
 function spawnSoldier(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean {
   for (let i = 0; i < roomsToHarvest.length; i++) {
     let roomToHarvest = Game.rooms[roomsToHarvest[i]];
+    let roomConnections = Tasks.getRoomConnections(roomToSpawnFrom);
     if (!roomToHarvest)//If room not visible don't create any soldiers
+      continue;
+    if (roomConnections.length != 0 && !roomConnections.includes(roomsToHarvest[i]))
       continue;
     let probeSetupSoldier = new ProbeSetup({ ordered: true, prefix: [TOUGH, TOUGH, TOUGH], pattern: [ATTACK, MOVE], sizeLimit: 3 }, "soldier-" + Game.time, { role: "soldier", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
     let soldiers = Nexus.getProbes("soldier", roomsToHarvest[i], true);
