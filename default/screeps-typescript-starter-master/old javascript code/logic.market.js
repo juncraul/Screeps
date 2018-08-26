@@ -28,7 +28,7 @@ var sellToABuyOrder = function() {
     for(var res = 0; res < resourcesForBuyOrders.length; res ++)
     {
         var buyOrders = Game.market.getAllOrders({resourceType: resourcesForBuyOrders[res], type: ORDER_BUY})
-        if(buyOrders.length == 0) continue
+        if(buyOrders.length === 0) continue
         buyOrders = buyOrders.sort(function(a, b) {return b.price - a.price})
         var orderToBuy = buyOrders[0];
         if(orderToBuy.price < minimumPriceToBuyFor[res]) continue;
@@ -51,7 +51,7 @@ var sellToABuyOrder = function() {
                 ? (terminal.store[resourcesForBuyOrders[res]] - minimumResToLeaveInTerm[res]) 
                 : orderToBuy.remainingAmount;
             var transforEnergyCost = Game.market.calcTransactionCost(amountToBuy, room.name, orderToBuy.roomName);
-            var resourceRemaining = terminal.store[resourcesForBuyOrders[res]] - amountToBuy - (resourcesForBuyOrders[res] == RESOURCE_ENERGY ? transforEnergyCost : 0);
+            var resourceRemaining = terminal.store[resourcesForBuyOrders[res]] - amountToBuy - (resourcesForBuyOrders[res] === RESOURCE_ENERGY ? transforEnergyCost : 0);
             
             if(resourceRemaining <= minimumResToLeaveInTerm[res] || amountToBuy <= 0 || transforEnergyCost > terminal.store[RESOURCE_ENERGY]) continue;
             
@@ -103,7 +103,7 @@ var createASellOrder = function() {
             for(var i = 0; i < buyOrders.length && resourceRemaining >= minimumResToLeaveInTerm[res]; i ++)
             {
                 //console.log("iterate orders")
-                firstOrderPrice = firstOrderPrice == -1 ? buyOrders[i].price : firstOrderPrice;
+                firstOrderPrice = firstOrderPrice === -1 ? buyOrders[i].price : firstOrderPrice;
                 const transforEnergyCost = Game.market.calcTransactionCost(amountToBuy, room.name, buyOrders[i].roomName);
                 //console.log(transforEnergyCost + " " + buyOrders[i].price)
                 if(transforEnergyCost > maximumAmountOfCost || buyOrders[i].price < firstOrderPrice * 0.90) continue;

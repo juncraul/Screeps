@@ -1,3 +1,4 @@
+import { OrderSchedule } from "utils/OrderSchedule";
 
 export class Tasks {
   public static getRoomsToHarvest(): string[] {
@@ -51,6 +52,10 @@ export class Tasks {
       default:
         return [];
     }
+  }
+
+  public static getOrdersToCreate(): OrderSchedule[] {
+    return [new OrderSchedule(RESOURCE_ENERGY, 0.001, 10000)];
   }
 
   public static getmyRoomsWithController(): Room[] {

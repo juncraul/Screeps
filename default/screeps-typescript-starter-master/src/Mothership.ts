@@ -5,6 +5,7 @@ import { Cannon } from "Cannon";
 import { Tasks } from "Tasks";
 import { Helper } from "Helper";
 import { Stargate } from "Stargate";
+import { TradeHub } from "TradeHub";
 
 export function run(): void {
   let roomsToHarvest = Tasks.getRoomsToHarvest();
@@ -58,6 +59,14 @@ export function run(): void {
     })
 
     Stargate.moveEnergyAround(room);
+
+    if (Game.time % 5 == 0) {
+      let terminal = TradeHub.getTerminalFromRoom(room);
+      if (terminal) {
+        let tradeHub = new TradeHub(terminal);
+        tradeHub.setUpOrders();
+      }
+    }
   })
 
   let allProbes = Nexus.getProbes();
@@ -135,7 +144,7 @@ function upgraderLogic(probe: Probe): void {
     }
   }
   if (probe.memory.isGathering) {
-    let deposit = getClosestFilledDeposit(probe, false, 300);
+    let deposit = getClosestFilledDeposit(probe, false, false, 300);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
@@ -171,7 +180,7 @@ function builderLogic(probe: Probe): void {
     }
   }
   if (probe.memory.isGathering) {
-    let deposit = getClosestFilledDeposit(probe, false, 300);
+    let deposit = getClosestFilledDeposit(probe, false, false, 300);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
@@ -224,7 +233,7 @@ function carrierLogic(probe: Probe): void {
     }
   }
   if (probe.memory.isGathering) {
-    let deposit = getClosestFilledDeposit(probe, true, 200);
+    let deposit = getClosestFilledDeposit(probe, true, true, 200);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else if (_.sum(probe.carry) > 0) {//Instead of waiting for a deposit to fill up, just return back what it currenlty has.
@@ -251,7 +260,7 @@ function repairerLogic(probe: Probe): void {
     }
   }
   if (probe.memory.isGathering) {
-    let deposit = getClosestFilledDeposit(probe, false, 300);
+    let deposit = getClosestFilledDeposit(probe, false, false, 300);
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
@@ -355,12 +364,12 @@ function longDistanceCarrierLogic(probe: Probe): void {
         probe.pickup(droppedResource);
       }
       else {
-        let deposit = getClosestFilledDeposit(probe, true, probe.carryCapacity - _.sum(probe.carry));
+        let deposit = getClosestFilledDeposit(probe, true, false, probe.carryCapacity - _.sum(probe.carry));
         if (deposit) {
           probe.withdraw(deposit, RESOURCE_ENERGY);
         }
         else {
-          let deposit = getClosestFilledDeposit(probe, true, 0);
+          let deposit = getClosestFilledDeposit(probe, true, false, 0);
           if (deposit) {
             probe.withdraw(deposit, RESOURCE_ENERGY);
           }
@@ -418,7 +427,7 @@ function longDistanceBuilderLogic(probe: Probe): void {
       }
     }
     if (probe.memory.isGathering) {
-      let deposit = getClosestFilledDeposit(probe, false, 100);
+      let deposit = getClosestFilledDeposit(probe, false, false, 100);
       if (deposit) {
         probe.withdraw(deposit, RESOURCE_ENERGY);
       } else {
@@ -553,11 +562,12 @@ function getClosestEmptyDeposit(probe: Probe): Structure | null {
   return deposit;
 }
 
-function getClosestFilledDeposit(probe: Probe, excludeControllerDeposit: boolean, whenIsMoreThan: number): Structure | null {
+function getClosestFilledDeposit(probe: Probe, excludeControllerDeposit: boolean, excludeStorage: boolean, whenIsMoreThan: number): Structure | null {
   let controllerDeposits = getDepositNextToController(probe.room, false);
   let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
     filter: structure =>
-      ((((structure.structureType == STRUCTURE_CONTAINER) && structure.store[RESOURCE_ENERGY] > whenIsMoreThan) ||
+      ((((structure.structureType == STRUCTURE_CONTAINER ||
+        (!excludeStorage && structure.structureType == STRUCTURE_STORAGE)) && structure.store[RESOURCE_ENERGY] > whenIsMoreThan) ||
         (structure.structureType == STRUCTURE_LINK && structure.energy > whenIsMoreThan))
         && (!excludeControllerDeposit || (excludeControllerDeposit && !controllerDeposits.includes(structure))))
   })
@@ -713,11 +723,17 @@ function spawnHarvester(roomToSpawnFrom: Room): boolean {
   let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(harvesters, WORK) + Probe.getActiveBodyPartsFromArrayOfProbes(longDistanceHarvesters, WORK);
   let energyToUse: number;
   let bodyPartsPerSourceRequired = carriers.length <= 1 ? 2 : 6;//Set Harvester at full capacity only if there are enough carriers to sustain them
+  let levelBlueprintToBuild: number;
 
   if (!controller) {
     return false;
   }
-  switch (controller.level) {
+  else {
+    levelBlueprintToBuild = Game.rooms[roomToSpawnFrom.name].find(FIND_CONSTRUCTION_SITES, { filter: structure => structure.structureType == STRUCTURE_EXTENSION }).length == 0
+      ? controller.level//No extenstions to construct, set blueprint as current controller level
+      : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level
+  }
+  switch (levelBlueprintToBuild) {
     case 1://300 Energy avilable
       energyToUse = 200;//1 Work; 1 Carry; 1 Move
       probeSetupHarvester = probeSetupHarvesterOne;
@@ -780,11 +796,17 @@ function spawnCarrier(roomToSpawnFrom: Room): boolean {
   let carriersAboutToDie = _.filter(carriers, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
   let controller = getController(roomToSpawnFrom);
   let energyToUse: number;
+  let levelBlueprintToBuild: number;
 
   if (!controller) {
     return false;
   }
-  switch (controller.level) {
+  else {
+    levelBlueprintToBuild = Game.rooms[roomToSpawnFrom.name].find(FIND_CONSTRUCTION_SITES, { filter: structure => structure.structureType == STRUCTURE_EXTENSION }).length == 0
+      ? controller.level//No extenstions to construct, set blueprint as current controller level
+      : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level
+  }
+  switch (levelBlueprintToBuild) {
     case 1://300 Energy avilable
       energyToUse = 100;//1 Carry; 1 Move
       probeSetupCarrier = probeSetupCarrierOne;
@@ -838,11 +860,17 @@ function spawnLongDistanceHarvester(roomToSpawnFrom: Room, roomsToHarvest: strin
     let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(harvesters, WORK);
     let controller = getController(roomToSpawnFrom);
     let energyToUse: number;
+    let levelBlueprintToBuild: number;
 
     if (!controller) {
       return false;
     }
-    switch (controller.level) {
+    else {
+      levelBlueprintToBuild = Game.rooms[roomToSpawnFrom.name].find(FIND_CONSTRUCTION_SITES, { filter: structure => structure.structureType == STRUCTURE_EXTENSION }).length == 0
+        ? controller.level//No extenstions to construct, set blueprint as current controller level
+        : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level
+    }
+    switch (levelBlueprintToBuild) {
       case 1:
       case 2:
         return false;
@@ -876,18 +904,28 @@ function spawnLongDistanceCarrier(roomToSpawnFrom: Room, roomsToHarvest: string[
     let containers = roomToHarvest != null ? roomToHarvest.find(FIND_STRUCTURES, { filter: (structure) => structure.structureType == STRUCTURE_CONTAINER }).length : 0;
     let controller = getController(roomToSpawnFrom);
     let energyToUse: number;
+    let levelBlueprintToBuild: number;
     
     if (!controller) {
       return false;
     }
-    switch (controller.level) {
+    else {
+      levelBlueprintToBuild = Game.rooms[roomToSpawnFrom.name].find(FIND_CONSTRUCTION_SITES, { filter: structure => structure.structureType == STRUCTURE_EXTENSION }).length == 0
+        ? controller.level//No extenstions to construct, set blueprint as current controller level
+        : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level
+    }
+    switch (levelBlueprintToBuild) {
       case 1:
       case 2:
         return false;
       case 3://800 Energy available
         energyToUse = 750;//10 Carry; 5 Move
         break;
-      default://1300 Energy at least
+      case 4://1300 Energy available
+        energyToUse = 1050//14 Carry; 7 Move
+        probeSetupLongDistanceCarrier.replaceBodySetup(bodySetupMedium);
+        break;
+      default://1800 Energy at least
         energyToUse = 1200//16 Carry; 8 Move
         probeSetupLongDistanceCarrier.replaceBodySetup(bodySetupMedium);
         break;
