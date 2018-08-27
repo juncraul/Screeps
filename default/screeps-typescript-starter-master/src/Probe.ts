@@ -91,8 +91,46 @@ export class Probe {
     return result;
   }
 
+  transferAll(target: Creep | Probe | Structure) {
+    let result: ScreepsReturnCode;
+    result = ERR_NOT_ENOUGH_RESOURCES;
+    for (let resourceType in this.carry) {
+      if (this.carry[<ResourceConstant>resourceType]! == 0)
+        continue;
+      if (target instanceof Probe) {
+        result = this.creep.transfer(target.creep, <ResourceConstant>resourceType);
+      } else {
+        result = this.creep.transfer(target, <ResourceConstant>resourceType);
+      }
+    }
+    if (result == ERR_NOT_IN_RANGE) {
+      this.goTo(target.pos);
+    }
+    return result;
+  }
+
   withdraw(target: Tombstone | Structure, resourceType: ResourceConstant, amount?: number) {
     let result = this.creep.withdraw(target, resourceType, amount);
+    if (result == ERR_NOT_IN_RANGE) {
+      this.goTo(target.pos);
+    }
+    return result;
+  }
+
+  withdrawAll(target: Tombstone | Structure) {
+    let result: ScreepsReturnCode;
+    result = ERR_NOT_ENOUGH_RESOURCES;
+    if (target instanceof StructureLink) {
+      result = this.creep.withdraw(target, RESOURCE_ENERGY);
+    }
+    else if (target instanceof StructureLab) {
+      result = this.creep.withdraw(target, <ResourceConstant>target.mineralType);
+    }
+    else if (target instanceof Tombstone || target instanceof StructureContainer || target instanceof StructureStorage || target instanceof StructureTerminal) {
+      for (let resourceType in target.store) {
+        result = this.creep.withdraw(target, <ResourceConstant>resourceType);
+      }
+    }
     if (result == ERR_NOT_IN_RANGE) {
       this.goTo(target.pos);
     }

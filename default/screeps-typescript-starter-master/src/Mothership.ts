@@ -110,10 +110,10 @@ function harvesterLogic(probe: Probe): void {
   if (_.sum(probe.carry) === probe.carryCapacity) {
     let deposit = getClosestEmptyDeposit(probe);
     if (deposit) {
-      probe.transfer(deposit, RESOURCE_ENERGY);
+      probe.transferAll(deposit);
     }
   } else {
-    let source = getClosestActiveSourceDivided(probe);
+    let source = getClosestActiveSourceDivided(probe, true);
     if (source) {
       let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
       if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
@@ -210,32 +210,32 @@ function carrierLogic(probe: Probe): void {
   }
   if (probe.memory.isWorking) {
     let supply = getStructureToSupplyPriority(probe);
-    if (supply) {
+    if (supply && probe.carry[RESOURCE_ENERGY] > 0) {
       probe.transfer(supply, RESOURCE_ENERGY);
     }
     else {
       let supply = getStructureToSupplyForReproduction(probe);
-      if (supply) {
+      if (supply && probe.carry[RESOURCE_ENERGY] > 0) {
         probe.transfer(supply, RESOURCE_ENERGY);
       }
       else {
         let supplyControllerDeposit = getDepositNextToController(probe.room, true);
-        if (supplyControllerDeposit.length > 0) {
+        if (supplyControllerDeposit.length > 0 && probe.carry[RESOURCE_ENERGY] > 0) {
           probe.transfer(supplyControllerDeposit[0], RESOURCE_ENERGY);
         }
         else {
-          let differentOtherStucture = getStructureToSupply(probe);
+          let differentOtherStucture = getStructureDepositToSupply(probe);
           if (differentOtherStucture) {
-            probe.transfer(differentOtherStucture, RESOURCE_ENERGY);
+            probe.transferAll(differentOtherStucture);
           }
         }
       }
     }
   }
   if (probe.memory.isGathering) {
-    let deposit = getClosestFilledDeposit(probe, true, true, 200);
+    let deposit = getClosestFilledDeposit(probe, true, true, 200, false);
     if (deposit) {
-      probe.withdraw(deposit, RESOURCE_ENERGY);
+      probe.withdrawAll(deposit);
     } else if (_.sum(probe.carry) > 0) {//Instead of waiting for a deposit to fill up, just return back what it currenlty has.
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -498,8 +498,19 @@ function soldierLogic(probe: Probe): void {
   } 
 }
 
-function getClosestActiveSourceDivided(probe: Probe): Source | null {
-  let sources = probe.room.find(FIND_SOURCES_ACTIVE);
+function getClosestActiveSourceDivided(probe: Probe, includeMineralDeposit: boolean = false): Mineral | Source | null {
+  let sources: (Mineral | Source)[]
+  sources = probe.room.find(FIND_SOURCES_ACTIVE);
+  if (includeMineralDeposit) {
+    let mineral = getAvailableMineral(probe.room);
+    if (mineral) {
+      sources.push(mineral);
+    }
+  }
+  let previouslyAssignedTo = sources.filter(s => s.id == probe.memory.targetId)[0];
+  if (previouslyAssignedTo) {
+    return previouslyAssignedTo;
+  }
   let arraySources: number[];
   arraySources = [];
   let currentSourceIndex = 0;
@@ -516,7 +527,7 @@ function getClosestActiveSourceDivided(probe: Probe): Source | null {
   })
   let minIndex = arraySources.indexOf(Math.min(...arraySources));
   arraySources[minIndex] += 100;
-  let secondMinIndex = arraySources.indexOf(Math.min(...arraySources));//Get the second minimum index by temporarly seeting the minimum to a hich number.
+  let secondMinIndex = arraySources.indexOf(Math.min(...arraySources));//Get the second minimum index by temporarly seeing the minimum to a high number.
   arraySources[minIndex] -= 100;
   if (minIndex != undefined) {
     //if (probe.room.name == "W8N3") {
@@ -528,7 +539,7 @@ function getClosestActiveSourceDivided(probe: Probe): Source | null {
     //  console.log("index c - " + sources[currentSourceIndex] + " " + arraySources[currentSourceIndex])
     //}
     if (arraySources[currentSourceIndex] > arraySources[minIndex]) {
-      let source: Source | null;
+      let source: Mineral | Source | null;
       if (arraySources[minIndex] == arraySources[secondMinIndex]) {
         source = probe.pos.findPathTo(sources[minIndex]).length < probe.pos.findPathTo(sources[secondMinIndex]).length ? sources[minIndex] : sources[secondMinIndex];
       } else {
@@ -552,6 +563,16 @@ function getClosestActiveSourceDivided(probe: Probe): Source | null {
 //  return source;
 //}
 
+function getAvailableMineral(room: Room): Mineral | null {
+  let mineralExtractor = room.find(FIND_STRUCTURES, { filter: (structure) => { return (structure.structureType === STRUCTURE_EXTRACTOR) } })[0];
+  let mineral = room.find(FIND_MINERALS, { filter: mineral => mineral.mineralAmount > 0 })[0];
+  if (mineralExtractor && mineral) {
+    return mineral;
+  } else {
+    return null;
+  }
+}
+
 function getClosestEmptyDeposit(probe: Probe): Structure | null {
   let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
     filter: structure => (structure.structureType == STRUCTURE_CONTAINER && _.sum(structure.store) < structure.storeCapacity)
@@ -562,16 +583,26 @@ function getClosestEmptyDeposit(probe: Probe): Structure | null {
   return deposit;
 }
 
-function getClosestFilledDeposit(probe: Probe, excludeControllerDeposit: boolean, excludeStorage: boolean, whenIsMoreThan: number): Structure | null {
+function getClosestFilledDeposit(probe: Probe, excludeControllerDeposit: boolean, excludeStorage: boolean, whenIsMoreThan: number, onlyEnergy: boolean = true): Structure | null {
   let controllerDeposits = getDepositNextToController(probe.room, false);
-  let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
-    filter: structure =>
-      ((((structure.structureType == STRUCTURE_CONTAINER ||
-        (!excludeStorage && structure.structureType == STRUCTURE_STORAGE)) && structure.store[RESOURCE_ENERGY] > whenIsMoreThan) ||
-        (structure.structureType == STRUCTURE_LINK && structure.energy > whenIsMoreThan))
-        && (!excludeControllerDeposit || (excludeControllerDeposit && !controllerDeposits.includes(structure))))
-  })
-  return deposit;
+  let previousDeposit = probe.room.find(FIND_STRUCTURES, {
+    filter: structure => structure.id == probe.memory.targetId &&
+      ((structure.structureType == STRUCTURE_LINK && structure.energy > whenIsMoreThan) ||
+      ((structure.structureType == STRUCTURE_CONTAINER || structure.structureType == STRUCTURE_STORAGE)
+        && ((onlyEnergy && structure.store[RESOURCE_ENERGY] > whenIsMoreThan) || (!onlyEnergy && _.sum(structure.store) > whenIsMoreThan))))
+  })[0]
+  if (previousDeposit) {
+    return previousDeposit;
+  } else {
+    return probe.pos.findClosestByPath(FIND_STRUCTURES, {
+      filter: structure =>
+        ((((structure.structureType == STRUCTURE_CONTAINER ||
+          (!excludeStorage && structure.structureType == STRUCTURE_STORAGE))
+          && ((onlyEnergy && structure.store[RESOURCE_ENERGY] > whenIsMoreThan) || (!onlyEnergy && _.sum(structure.store) > whenIsMoreThan))) ||
+          (structure.structureType == STRUCTURE_LINK && structure.energy > whenIsMoreThan))
+          && (!excludeControllerDeposit || (excludeControllerDeposit && !controllerDeposits.includes(structure))))
+    })
+  }
 }
 
 
@@ -610,16 +641,11 @@ function getStructureToSupplyForReproduction(probe: Probe): Structure | null  {
   return deposit
 }
 
-function getStructureToSupply(probe: Probe): Structure | null {
-  let stargate = Stargate.getDestinationStargates(probe.room)[0];//Works only with one destination
-  let nono = stargate ? stargate.id: "meh";
-  let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {   //Consider using: objArray.find(function (obj) { return obj.id === 3; });
-    filter: structure => ((
-      structure.structureType == STRUCTURE_SPAWN ||
-      structure.structureType == STRUCTURE_EXTENSION) && structure.energy < structure.energyCapacity && structure.id != nono) ||
-      ((structure.structureType == STRUCTURE_STORAGE ||
-        structure.structureType == STRUCTURE_TERMINAL) && _.sum(structure.store) < structure.storeCapacity) ||
-      (structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity * 0.75)
+function getStructureDepositToSupply(probe: Probe): Structure | null {
+  let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
+    filter: structure => (
+      (structure.structureType == STRUCTURE_STORAGE ||
+        structure.structureType == STRUCTURE_TERMINAL) && _.sum(structure.store) < structure.storeCapacity)
   });
   return deposit
 }
@@ -711,43 +737,44 @@ function getStructuresInRangeOf(roomPosition: RoomPosition, structureToLookFor: 
 function spawnHarvester(roomToSpawnFrom: Room): boolean {
   let probeSetupHarvester: ProbeSetup;
   let probeSetupHarvesterOne = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 1 }, "harvester-" + Game.time, { role: "harvester" });
-  let probeSetupHarvesterTwo = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE], sizeLimit: 3 }, "harvester-" + Game.time, { role: "harvester" });
-  let probeSetupHarvesterThree = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE], sizeLimit: 5 }, "harvester-" + Game.time, { role: "harvester" });
-  let probeSetupHarvesterElite = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE], sizeLimit: 6 }, "harvester-" + Game.time, { role: "harvester" });
+  let probeSetupHarvesterTwo = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 3 }, "harvester-" + Game.time, { role: "harvester" });
+  let probeSetupHarvesterThree = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 5 }, "harvester-" + Game.time, { role: "harvester" });
+  let probeSetupHarvesterElite = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 6 }, "harvester-" + Game.time, { role: "harvester" });
   let harvesters = Nexus.getProbes("harvester", roomToSpawnFrom.name);
   let carriers = Nexus.getProbes("carrier", roomToSpawnFrom.name);
   let longDistanceHarvesters = Nexus.getProbes("longDistanceHarvester", roomToSpawnFrom.name, true);
   let harvestersAboutToDie = _.filter(harvesters, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
-  let sources = roomToSpawnFrom.find(FIND_SOURCES).length;
+  let mineral = getAvailableMineral(roomToSpawnFrom);
+  let sources = roomToSpawnFrom.find(FIND_SOURCES).length + (mineral ? 1 : 0);
   let controller = getController(roomToSpawnFrom);
   let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(harvesters, WORK) + Probe.getActiveBodyPartsFromArrayOfProbes(longDistanceHarvesters, WORK);
   let energyToUse: number;
   let bodyPartsPerSourceRequired = carriers.length <= 1 ? 2 : 6;//Set Harvester at full capacity only if there are enough carriers to sustain them
   let levelBlueprintToBuild: number;
-
+  
   if (!controller) {
     return false;
   }
   else {
     levelBlueprintToBuild = Game.rooms[roomToSpawnFrom.name].find(FIND_CONSTRUCTION_SITES, { filter: structure => structure.structureType == STRUCTURE_EXTENSION }).length == 0
-      ? controller.level//No extenstions to construct, set blueprint as current controller level
-      : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level
-  }
+      ? controller.level//No extenstions to construct, set blueprint as current controller level.
+      : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level.
+  }//This substruction will not happen when controller.level == 1 because there are no extensions to be built at that time.
   switch (levelBlueprintToBuild) {
     case 1://300 Energy avilable
       energyToUse = 200;//1 Work; 1 Carry; 1 Move
       probeSetupHarvester = probeSetupHarvesterOne;
       break;
     case 2://550 Energy available
-      energyToUse = 400;//3 Work; 1 Carry; 1 Move
+      energyToUse = 450;//3 Work; 1 Carry; 2 Move
       probeSetupHarvester = probeSetupHarvesterTwo;
       break;
     case 3://800 Energy available
-      energyToUse = 600;//5 Work; 1 Carry; 1 Move
+      energyToUse = 650;//5 Work; 1 Carry; 2 Move
       probeSetupHarvester = probeSetupHarvesterThree;
       break;
     default://1300 Energy at least
-      energyToUse = 700//6 Work; 1 Carry; 1 Move
+      energyToUse = 750//6 Work; 1 Carry; 2 Move
       probeSetupHarvester = probeSetupHarvesterElite;
       break;
   }
@@ -791,7 +818,8 @@ function spawnCarrier(roomToSpawnFrom: Room): boolean {
   let probeSetupCarrierOne = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 1 }, "carrier-" + Game.time, { role: "carrier" });
   let probeSetupCarrierTwo = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 2 }, "carrier-" + Game.time, { role: "carrier" });
   let probeSetupCarrierThree = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 5 }, "carrier-" + Game.time, { role: "carrier" });
-  let probeSetupCarrierElite = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 10 }, "carrier-" + Game.time, { role: "carrier" });
+  let probeSetupCarrierFour = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 10 }, "carrier-" + Game.time, { role: "carrier" });
+  let probeSetupCarrierElite = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 17 }, "carrier-" + Game.time, { role: "carrier" });
   let carriers = Nexus.getProbes("carrier", roomToSpawnFrom.name);
   let carriersAboutToDie = _.filter(carriers, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
   let controller = getController(roomToSpawnFrom);
@@ -803,9 +831,9 @@ function spawnCarrier(roomToSpawnFrom: Room): boolean {
   }
   else {
     levelBlueprintToBuild = Game.rooms[roomToSpawnFrom.name].find(FIND_CONSTRUCTION_SITES, { filter: structure => structure.structureType == STRUCTURE_EXTENSION }).length == 0
-      ? controller.level//No extenstions to construct, set blueprint as current controller level
-      : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level
-  }
+      ? controller.level//No extenstions to construct, set blueprint as current controller level.
+      : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level.
+  }//This substruction will not happen when controller.level == 1 because there are no extensions to be built at that time.
   switch (levelBlueprintToBuild) {
     case 1://300 Energy avilable
       energyToUse = 100;//1 Carry; 1 Move
@@ -819,8 +847,12 @@ function spawnCarrier(roomToSpawnFrom: Room): boolean {
       energyToUse = 500;//5 Carry; 5 Move
       probeSetupCarrier = probeSetupCarrierThree;
       break;
-    default://1300 Energy at least
+    case 4://1300 Energy available
       energyToUse = 1000//10 Carry; 10 Move
+      probeSetupCarrier = probeSetupCarrierFour;
+      break;
+    default://1800 Energy at least
+      energyToUse = 1700//17 Carry; 17 Move
       probeSetupCarrier = probeSetupCarrierElite;
       break;
   }
@@ -867,9 +899,9 @@ function spawnLongDistanceHarvester(roomToSpawnFrom: Room, roomsToHarvest: strin
     }
     else {
       levelBlueprintToBuild = Game.rooms[roomToSpawnFrom.name].find(FIND_CONSTRUCTION_SITES, { filter: structure => structure.structureType == STRUCTURE_EXTENSION }).length == 0
-        ? controller.level//No extenstions to construct, set blueprint as current controller level
-        : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level
-    }
+        ? controller.level//No extenstions to construct, set blueprint as current controller level.
+        : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level.
+    }//This substruction will not happen when controller.level == 1 because there are no extensions to be built at that time.
     switch (levelBlueprintToBuild) {
       case 1:
       case 2:
@@ -911,9 +943,9 @@ function spawnLongDistanceCarrier(roomToSpawnFrom: Room, roomsToHarvest: string[
     }
     else {
       levelBlueprintToBuild = Game.rooms[roomToSpawnFrom.name].find(FIND_CONSTRUCTION_SITES, { filter: structure => structure.structureType == STRUCTURE_EXTENSION }).length == 0
-        ? controller.level//No extenstions to construct, set blueprint as current controller level
-        : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level
-    }
+        ? controller.level//No extenstions to construct, set blueprint as current controller level.
+        : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level.
+    }//This substruction will not happen when controller.level == 1 because there are no extensions to be built at that time.
     switch (levelBlueprintToBuild) {
       case 1:
       case 2:
