@@ -148,15 +148,21 @@ function upgraderLogic(probe: Probe): void {
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
-      let source = getClosestActiveSourceDivided(probe);
-      if (source) {
-        let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-        if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
-          if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-            probe.goTo(containerNextToSource.pos);
+      let droppedResource = getDroppedResource(probe.pos);
+      if (droppedResource) {
+        probe.pickup(droppedResource);
+      }
+      else {
+        let source = getClosestActiveSourceDivided(probe);
+        if (source) {
+          let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
+          if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
+            if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+              probe.goTo(containerNextToSource.pos);
+            }
+          } else {
+            probe.harvest(source);
           }
-        } else {
-          probe.harvest(source);
         }
       }
     }
@@ -184,15 +190,21 @@ function builderLogic(probe: Probe): void {
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
-      let source = getClosestActiveSourceDivided(probe);
-      if (source) {
-        let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-        if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
-          if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-            probe.goTo(containerNextToSource.pos);
+      let droppedResource = getDroppedResource(probe.pos);
+      if (droppedResource) {
+        probe.pickup(droppedResource);
+      }
+      else {
+        let source = getClosestActiveSourceDivided(probe);
+        if (source) {
+          let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
+          if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
+            if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+              probe.goTo(containerNextToSource.pos);
+            }
+          } else {
+            probe.harvest(source);
           }
-        } else {
-          probe.harvest(source);
         }
       }
     }
@@ -264,15 +276,21 @@ function repairerLogic(probe: Probe): void {
     if (deposit) {
       probe.withdraw(deposit, RESOURCE_ENERGY);
     } else {
-      let source = getClosestActiveSourceDivided(probe);
-      if (source) {
-        let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-        if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
-          if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-            probe.goTo(containerNextToSource.pos);
+      let droppedResource = getDroppedResource(probe.pos);
+      if (droppedResource) {
+        probe.pickup(droppedResource);
+      }
+      else {
+        let source = getClosestActiveSourceDivided(probe);
+        if (source) {
+          let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
+          if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
+            if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+              probe.goTo(containerNextToSource.pos);
+            }
+          } else {
+            probe.harvest(source);
           }
-        } else {
-          probe.harvest(source);
         }
       }
     }
@@ -431,15 +449,21 @@ function longDistanceBuilderLogic(probe: Probe): void {
       if (deposit) {
         probe.withdraw(deposit, RESOURCE_ENERGY);
       } else {
-        let source = getClosestActiveSourceDivided(probe);
-        if (source) {
-          let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-          if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
-            if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-              probe.goTo(containerNextToSource.pos);
+        let droppedResource = getDroppedResource(probe.pos);
+        if (droppedResource) {
+          probe.pickup(droppedResource);
+        }
+        else {
+          let source = getClosestActiveSourceDivided(probe);
+          if (source) {
+            let containerNextToSource = getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
+            if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
+              if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+                probe.goTo(containerNextToSource.pos);
+              }
+            } else {
+              probe.harvest(source);
             }
-          } else {
-            probe.harvest(source);
           }
         }
       }

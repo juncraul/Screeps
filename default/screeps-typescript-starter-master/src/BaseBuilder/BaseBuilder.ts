@@ -1,5 +1,5 @@
 import { BaseLayout, Coord } from "./BaseLayout";
-import { layout } from "./Layout";
+import { layoutSieve, layoutRooftop, layoutReverseRooftop } from "./Layout";
 
 
 export class BaseBuilder {
@@ -11,7 +11,22 @@ export class BaseBuilder {
       if (_.filter(Game.creeps, (creep) => creep.room == flag.room).length == 0)
         continue;
 
-      this.buildBase(flag.pos, layout, 4, flag.color == COLOR_WHITE);
+      let layoutToBeUsed: BaseLayout;
+      switch (flag.secondaryColor) {
+        case COLOR_WHITE:
+          layoutToBeUsed = layoutSieve;
+          break;
+        case COLOR_GREY:
+          layoutToBeUsed = layoutRooftop;
+          break;
+        case COLOR_BROWN:
+          layoutToBeUsed = layoutReverseRooftop;
+          break;
+        default:
+          layoutToBeUsed = layoutSieve;
+          break;
+      }
+      this.buildBase(flag.pos, layoutToBeUsed, 4, flag.color == COLOR_WHITE);
     }
 
     flag = Game.flags["CreateSpawn"];
@@ -28,14 +43,14 @@ export class BaseBuilder {
     let wallCoordinates = layout[controllerLevel]!.buildings["wall"].pos;
     let rampartCoordinates = layout[controllerLevel]!.buildings["rampart"].pos;
 
-    this.buildBuildingType(anchor, spawnCoordinates, "S", STRUCTURE_SPAWN, previewInsteadOfBuild);
-    this.buildBuildingType(anchor, roadCoordinates, "R", STRUCTURE_ROAD, previewInsteadOfBuild);
-    this.buildBuildingType(anchor, extensionCoordinates, "E", STRUCTURE_EXTENSION, previewInsteadOfBuild);
-    this.buildBuildingType(anchor, wallCoordinates, "W", STRUCTURE_WALL, previewInsteadOfBuild);
-    this.buildBuildingType(anchor, rampartCoordinates, "R", STRUCTURE_RAMPART, previewInsteadOfBuild);
+    this.buildBuildingType(anchor, spawnCoordinates, "S", STRUCTURE_SPAWN, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, roadCoordinates, "R", STRUCTURE_ROAD, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, extensionCoordinates, "E", STRUCTURE_EXTENSION, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, wallCoordinates, "W", STRUCTURE_WALL, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, rampartCoordinates, "R", STRUCTURE_RAMPART, previewInsteadOfBuild, layout);
   }
 
-  private static buildBuildingType(anchor: RoomPosition, buildingsCoordinates: Coord[], annotate: string, constructionType: BuildableStructureConstant, previewInsteadOfBuild: boolean) {
+  private static buildBuildingType(anchor: RoomPosition, buildingsCoordinates: Coord[], annotate: string, constructionType: BuildableStructureConstant, previewInsteadOfBuild: boolean, layout: BaseLayout) {
     buildingsCoordinates.forEach(function (coord) {
       let x = coord.x - layout.data.anchor.x + anchor.x;
       let y = coord.y - layout.data.anchor.y + anchor.y;
