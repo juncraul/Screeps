@@ -1,8 +1,12 @@
 
 export class Helper {
 
-  public static getCashedMemory(key: string): any {
-    return Memory.Keys[key]
+  public static getCashedMemory(key: string, defaultValue : any): any {
+    let obj = Memory.Keys[key];
+    if (obj == undefined) {
+      obj = defaultValue;
+    }
+    return obj;
   }
 
   public static setCashedMemory(key: string, value: any) {
@@ -10,7 +14,7 @@ export class Helper {
   }
 
   public static incrementCashedMemory(key: string, value: any) {
-    let cashed = Helper.getCashedMemory(key);
+    let cashed = Helper.getCashedMemory(key, 0);
     if (typeof cashed == 'number') {
       Memory.Keys[key] = cashed + value;
     }

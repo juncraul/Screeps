@@ -12,51 +12,65 @@ export class GetRoomObjects {
         sources.push(mineral);
       }
     }
-    let previouslyAssignedTo = sources.filter(s => s.id == probe.memory.targetId)[0];
-    if (previouslyAssignedTo) {
-      return previouslyAssignedTo;
-    }
     let arraySources: number[];
     arraySources = [];
-    let currentSourceIndex = 0;
+    let minCount = 1000;
+    let maxCount = -1000;
     let i = 0;
+    let currenctlyMining = -1;
     sources.forEach(function (source) {
-      let count = Helper.getCashedMemory("Harvesting-" + source.id);
-      count = count == undefined ? 0 : count;
+      let count = Helper.getCashedMemory("Harvesting-" + source.id, 0);
+      minCount = count < minCount ? count : minCount;
+      maxCount = count > maxCount ? count : maxCount;
       if (source.id == probe.memory.targetId) {
-        count--;
-        currentSourceIndex = i;
+        currenctlyMining = i;
       }
-      arraySources.push(count);
       i++;
+      arraySources.push(count);
     })
     let minIndex = arraySources.indexOf(Math.min(...arraySources));
     arraySources[minIndex] += 100;
     let secondMinIndex = arraySources.indexOf(Math.min(...arraySources));//Get the second minimum index by temporarly seeing the minimum to a high number.
     arraySources[minIndex] -= 100;
+
+
+    //If we already have the probe assign and no redistribution is need, exit func.
+    let previouslyAssignedTo = sources.filter(s => s.id == probe.memory.targetId)[0];
+    if (previouslyAssignedTo && maxCount - minCount <= 1) {
+      return previouslyAssignedTo;
+    }
+    else {
+      if (previouslyAssignedTo && arraySources[currenctlyMining] == minCount) {//Exit only if this probe already mines the smallest source.
+        return previouslyAssignedTo;
+      }
+    }
+    //if (probe.id == "5c5ed1fbaa0b8422e64c9e0f")
+    {
+      console.log("-------------")
+      console.log(probe.creep.id);
+      console.log("sources - " + sources)
+      console.log("prev ass: " + previouslyAssignedTo);
+      console.log("max : " + maxCount);
+      console.log("min : " + minCount);
+    }
+
     if (minIndex != undefined) {
-      //if (probe.room.name == "W8N3") {
-      //  console.log("-------------");
-      //  console.log(probe.creep.id);
-      //  console.log("index 0 - " + sources[0] + " " + arraySources[0])
-      //  console.log("index 1 - " + sources[1] + " " + arraySources[1])
-      //  console.log("index m - " + sources[minIndex] + " " + arraySources[minIndex])
-      //  console.log("index c - " + sources[currentSourceIndex] + " " + arraySources[currentSourceIndex])
-      //}
-      if (arraySources[currentSourceIndex] > arraySources[minIndex]) {
-        let source: Mineral | Source | null;
-        if (arraySources[minIndex] == arraySources[secondMinIndex]) {
-          source = probe.pos.findPathTo(sources[minIndex]).length < probe.pos.findPathTo(sources[secondMinIndex]).length ? sources[minIndex] : sources[secondMinIndex];
-        } else {
-          source = sources[minIndex];
-        }
-        Helper.incrementCashedMemory("Harvesting-" + probe.memory.targetId, -1);
-        Helper.incrementCashedMemory("Harvesting-" + source.id, 1);
-        return source;
+      //if (probe.id == "5c5ed1fbaa0b8422e64c9e0f")
+      {
+        console.log("sources - " + sources)
+        console.log("index 0 - " + sources[0] + " " + arraySources[0])
+        console.log("index 1 - " + sources[1] + " " + arraySources[1])
+        console.log("index m - " + sources[minIndex] + " " + arraySources[minIndex])
       }
-      else {
-        return sources[currentSourceIndex];
+      let source: Mineral | Source | null;
+      if (arraySources[minIndex] == arraySources[secondMinIndex]) {
+        source = probe.pos.findPathTo(sources[minIndex]).length < probe.pos.findPathTo(sources[secondMinIndex]).length ? sources[minIndex] : sources[secondMinIndex];
+      } else {
+        source = sources[minIndex];
       }
+      Helper.incrementCashedMemory("Harvesting-" + probe.memory.targetId, -1);
+      Helper.incrementCashedMemory("Harvesting-" + source.id, 1);
+      return source;
     } else {
       return null
     }
@@ -190,7 +204,7 @@ export class GetRoomObjects {
   public static getDepositNextToController(room: Room, notFilled: boolean): Structure[] {
     if (room.controller == null)
       return [];
-    let deposits = room.controller.pos.findInRange(FIND_STRUCTURES, 4, {
+    let deposits = room.controller.pos.findInRange(FIND_STRUCTURES, 3, {
       filter: (structure: any) => ((structure.structureType == STRUCTURE_CONTAINER) && (!notFilled || (notFilled && _.sum(structure.store) < structure.storeCapacity * 0.75)))
     });
     return deposits;

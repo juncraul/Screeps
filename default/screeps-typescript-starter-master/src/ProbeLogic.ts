@@ -51,17 +51,18 @@ export class ProbeLogic {
           probe.pickup(droppedResource);
         }
         else {
-          let source = GetRoomObjects.getClosestActiveSourceDivided(probe);
-          if (source) {
-            let containerNextToSource = GetRoomObjects.getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-            if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
-              if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-                probe.goTo(containerNextToSource.pos);
-              }
-            } else {
-              probe.harvest(source);
-            }
-          }
+          //Don't allow upgrader to harvest
+          //let source = GetRoomObjects.getClosestActiveSourceDivided(probe);
+          //if (source) {
+          //  let containerNextToSource = GetRoomObjects.getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
+          //  if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
+          //    if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+          //      probe.goTo(containerNextToSource.pos);
+          //    }
+          //  } else {
+          //    probe.harvest(source);
+          //  }
+          //}
         }
       }
     }
@@ -97,17 +98,18 @@ export class ProbeLogic {
           probe.pickup(droppedResource);
         }
         else {
-          let source = GetRoomObjects.getClosestActiveSourceDivided(probe);
-          if (source) {
-            let containerNextToSource = GetRoomObjects.getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-            if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
-              if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-                probe.goTo(containerNextToSource.pos);
-              }
-            } else {
-              probe.harvest(source);
-            }
-          }
+          //Don't allow builder to harvest
+          //let source = GetRoomObjects.getClosestActiveSourceDivided(probe);
+          //if (source) {
+          //  let containerNextToSource = GetRoomObjects.getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
+          //  if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
+          //    if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
+          //      probe.goTo(containerNextToSource.pos);
+          //    }
+          //  } else {
+          //    probe.harvest(source);
+          //  }
+          //}
         }
       }
     }
