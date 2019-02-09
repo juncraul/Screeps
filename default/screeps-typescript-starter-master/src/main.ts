@@ -8,6 +8,7 @@ import { BaseBuilder } from "BaseBuilder/BaseBuilder";
 export const loop = ErrorMapper.wrapLoop(() => {
   MemoryManager.initializeMemory();
   Mothership.run();
+  BaseBuilder.storeBuildOptionInMemory();
   BaseBuilder.logicCreateConstructionSites();
   
   // Automatically delete memory of missing creeps

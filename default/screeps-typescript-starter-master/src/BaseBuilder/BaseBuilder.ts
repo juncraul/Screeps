@@ -1,8 +1,40 @@
 import { BaseLayout, Coord } from "./BaseLayout";
 import { layoutSieve, layoutRooftop, layoutReverseRooftop } from "./Layout";
+import { Helper } from "Helper";
 
+//Flags: Primary - Secondary
+//Layout construction, flag must also be named "ConstructionSite-*" where * is number from 0 to 9
+//WHITE - WHITE Build Layout Sieve
+//WHITE - GREY  Build Layout Rooftop
+//WHITE - BROWN Build Layout Reverse/Rooftop
+//GREY  - WHITE Preview Layout Sieve
+//GREY  - GREY  Preview Layout Rooftop
+//GREY  - BROWN Preview Layout Reverse/Rooftop
+
+//BROWN - WHITE Build Rampart instead of wall
 
 export class BaseBuilder {
+  public static storeBuildOptionInMemory() {
+    for (let flagName in Game.flags) {
+      let flag = Game.flags[flagName];
+      switch (flag.color) {
+        case COLOR_BROWN:
+          switch (flag.secondaryColor) {
+            case COLOR_WHITE:
+              let constructionRampart: RoomPosition[];
+              constructionRampart = Helper.getCashedMemory("Construction-Rampart", []);
+              if (constructionRampart.filter(obj => { return obj.roomName == flag.pos.roomName && obj.x == flag.pos.x && obj.y == flag.pos.y }).length == 0) {
+                constructionRampart.push(flag.pos);
+                Helper.setCashedMemory("Construction-Rampart", constructionRampart);
+              }
+
+              break;
+          }
+          break;
+      }
+    }
+  }
+
   public static logicCreateConstructionSites() {
     for (var i = 0; i < 10; i++) {
       var flag = Game.flags["ConstructionSite-" + i];
@@ -23,11 +55,15 @@ export class BaseBuilder {
           layoutToBeUsed = layoutReverseRooftop;
           break;
         default:
-          layoutToBeUsed = layoutSieve;
-          break;
+          continue;
       }
-      this.buildBase(flag.pos, layoutToBeUsed, 4, flag.color == COLOR_WHITE);
-      this.createWall(Game.rooms[flag.pos.roomName], flag.color == COLOR_WHITE)
+      if (flag.color == COLOR_WHITE) {
+        this.buildBase(flag.pos, layoutToBeUsed, 4, true);
+        this.createWall(Game.rooms[flag.pos.roomName], true);
+      } else if (flag.color == COLOR_GREY && Game.time % 10 == 0) {//Construct only once every 10th tick
+        this.buildBase(flag.pos, layoutToBeUsed, 4, false);
+        this.createWall(Game.rooms[flag.pos.roomName], false);
+      }
     }
 
     flag = Game.flags["CreateSpawn"];
@@ -70,19 +106,19 @@ export class BaseBuilder {
     for (var i = 0; i < 50; i++) {
       let roomTerrain = Game.map.getRoomTerrain(room.name);
       if (roomTerrain.get(0, i) !== TERRAIN_MASK_WALL && roomTerrain.get(2, i) !== TERRAIN_MASK_WALL) {
-        this.createConstructionSite(room, 2, i, (i % 5 === 4 ? "A" : "W"), previewInsteadOfBuild);
+        this.createConstructionSite(room, 2, i, "W", previewInsteadOfBuild);
         this.createWallEdge(room, 2, i, previewInsteadOfBuild);
       }
       if (roomTerrain.get(49, i) !== TERRAIN_MASK_WALL && roomTerrain.get(47, i) !== TERRAIN_MASK_WALL) {
-        this.createConstructionSite(room, 47, i, (i % 5 === 4 ? "A" : "W"), previewInsteadOfBuild);
+        this.createConstructionSite(room, 47, i, "W", previewInsteadOfBuild);
         this.createWallEdge(room, 47, i, previewInsteadOfBuild);
       }
       if (roomTerrain.get(i, 0) !== TERRAIN_MASK_WALL && roomTerrain.get(i, 2) !== TERRAIN_MASK_WALL) {
-        this.createConstructionSite(room, i, 2, (i % 5 === 4 ? "A" : "W"), previewInsteadOfBuild);
+        this.createConstructionSite(room, i, 2, "W", previewInsteadOfBuild);
         this.createWallEdge(room, i, 2, previewInsteadOfBuild);
       }
       if (roomTerrain.get(i, 49) !== TERRAIN_MASK_WALL && roomTerrain.get(i, 47) !== TERRAIN_MASK_WALL) {
-        this.createConstructionSite(room, i, 47, (i % 5 === 4 ? "A" : "W"), previewInsteadOfBuild);
+        this.createConstructionSite(room, i, 47, "W", previewInsteadOfBuild);
         this.createWallEdge(room, i, 47, previewInsteadOfBuild);
       }
     }
@@ -118,16 +154,16 @@ export class BaseBuilder {
     else {
       let roomTerrain = Game.map.getRoomTerrain(room.name);
       if (roomTerrain.get(terrainXToCheck + xOffset, terrainYToCheck + yOffset) === TERRAIN_MASK_WALL) {
-        this.checkForStructureAndBuild(room, terrainXToCheck + 1 * xDirection + 2 * xOffset, terrainYToCheck + 1 * yDirection + 2 * yOffset, ((y - 1) % 5 === 4 ? "A" : "W"), previewInsteadOfBuild)
-        this.checkForStructureAndBuild(room, terrainXToCheck + 2 * xDirection + 2 * xOffset, terrainYToCheck + 2 * yDirection + 2 * yOffset, ((y - 1) % 5 === 4 ? "A" : "W"), previewInsteadOfBuild)
-        this.checkForStructureAndBuild(room, terrainXToCheck + 2 * xDirection + 1 * xOffset, terrainYToCheck + 2 * yDirection + 1 * yOffset, ((y - 1) % 5 === 4 ? "A" : "W"), previewInsteadOfBuild)
+        this.checkForStructureAndBuild(room, terrainXToCheck + 1 * xDirection + 2 * xOffset, terrainYToCheck + 1 * yDirection + 2 * yOffset, "W", previewInsteadOfBuild)
+        this.checkForStructureAndBuild(room, terrainXToCheck + 2 * xDirection + 2 * xOffset, terrainYToCheck + 2 * yDirection + 2 * yOffset, "W", previewInsteadOfBuild)
+        this.checkForStructureAndBuild(room, terrainXToCheck + 2 * xDirection + 1 * xOffset, terrainYToCheck + 2 * yDirection + 1 * yOffset, "W", previewInsteadOfBuild)
       }
       xOffset = (x === 2 || x === 47) ? 0 : 1;
       yOffset = (y === 2 || y === 47) ? 0 : 1;
       if (roomTerrain.get(terrainXToCheck + xOffset, terrainYToCheck + yOffset) === TERRAIN_MASK_WALL) {
-        this.checkForStructureAndBuild(room, terrainXToCheck + 1 * xDirection + 2 * xOffset, terrainYToCheck + 1 * yDirection + 2 * yOffset, ((y - 1) % 5 === 4 ? "A" : "W"), previewInsteadOfBuild)
-        this.checkForStructureAndBuild(room, terrainXToCheck + 2 * xDirection + 2 * xOffset, terrainYToCheck + 2 * yDirection + 2 * yOffset, ((y - 1) % 5 === 4 ? "A" : "W"), previewInsteadOfBuild)
-        this.checkForStructureAndBuild(room, terrainXToCheck + 2 * xDirection + 1 * xOffset, terrainYToCheck + 2 * yDirection + 1 * yOffset, ((y - 1) % 5 === 4 ? "A" : "W"), previewInsteadOfBuild)
+        this.checkForStructureAndBuild(room, terrainXToCheck + 1 * xDirection + 2 * xOffset, terrainYToCheck + 1 * yDirection + 2 * yOffset, "W", previewInsteadOfBuild)
+        this.checkForStructureAndBuild(room, terrainXToCheck + 2 * xDirection + 2 * xOffset, terrainYToCheck + 2 * yDirection + 2 * yOffset, "W", previewInsteadOfBuild)
+        this.checkForStructureAndBuild(room, terrainXToCheck + 2 * xDirection + 1 * xOffset, terrainYToCheck + 2 * yDirection + 1 * yOffset, "W", previewInsteadOfBuild)
       }
     }
   }
@@ -139,6 +175,13 @@ export class BaseBuilder {
   }
 
   private static createConstructionSite(room: Room, x: number, y: number, type: string, previewInsteadOfBuild: boolean) {
+    let constructionRampart: RoomPosition[];
+    constructionRampart = Helper.getCashedMemory("Construction-Rampart", []);
+    if (constructionRampart.filter(obj => { return obj.roomName == room.name && obj.x == x && obj.y == y }).length != 0) {
+      if (type == "W") {
+        type = "A";
+      }
+    }
     if (previewInsteadOfBuild) {
       room.visual.text(type, x, y, { align: 'center', opacity: 0.5, color: "#ff0000" });
     }

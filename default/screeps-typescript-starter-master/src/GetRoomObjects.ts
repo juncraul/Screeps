@@ -12,6 +12,8 @@ export class GetRoomObjects {
         sources.push(mineral);
       }
     }
+    if (sources.length == 0)//TODO: Consider moving the creeps to the closest source that will refresh
+      return null;
     let arraySources: number[];
     arraySources = [];
     let minCount = 1000;

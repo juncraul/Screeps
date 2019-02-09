@@ -31,7 +31,7 @@ export function run(): void {
     else if (spawnUpgrader(room)) {
       console.log(room.name + " Spawning Upgrader");
     }
-    else if (Nexus.getProbes("builder", room.name).length < 2 && GetRoomObjects.getConstructionSitesFromRoom(room).length > 0) {
+    else if (Nexus.getProbes("builder", room.name).length < 1 && GetRoomObjects.getConstructionSitesFromRoom(room).length > 0) {
       Nexus.spawnCreep(probeSetupBuilder, structureSpawn, energyCapacityRoom);
     }
     else if (Nexus.getProbes("repairer", room.name).length < 1 && GetRoomObjects.getClosestStructureToRepair(structureSpawn.pos, 0.7) != null) {
@@ -159,7 +159,7 @@ function spawnHarvester(roomToSpawnFrom: Room): boolean {
   let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(harvesters, WORK) + Probe.getActiveBodyPartsFromArrayOfProbes(longDistanceHarvesters, WORK);
   let energyToUse: number;
   let bodyPartsPerSourceRequired = carriers.length <= 1 ? 2 : 6;//Set Harvester at full capacity only if there are enough carriers to sustain them
-  let levelBlueprintToBuild: number;
+  //let levelBlueprintToBuild: number;
 
   if (harvesters.length >= getMaximumPossibleNumberOfHarvesters(roomToSpawnFrom))
     return false;
@@ -168,11 +168,14 @@ function spawnHarvester(roomToSpawnFrom: Room): boolean {
     return false;
   }
   else {
-    levelBlueprintToBuild = Game.rooms[roomToSpawnFrom.name].find(FIND_CONSTRUCTION_SITES, { filter: structure => structure.structureType == STRUCTURE_EXTENSION }).length == 0
-      ? controller.level//No extenstions to construct, set blueprint as current controller level.
-      : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level.
+    //if (Game.rooms[roomToSpawnFrom.name].find(FIND_CONSTRUCTION_SITES, { filter: structure => structure.structureType == STRUCTURE_EXTENSION }).length == 0) {
+    //  levelBlueprintToBuild = controller.level//No extenstions to construct, set blueprint as current controller level.
+    //}
+    //else {
+    //  levelBlueprintToBuild  = controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level.
+    //}
   }//This substruction will not happen when controller.level == 1 because there are no extensions to be built at that time.
-  switch (levelBlueprintToBuild) {
+  switch (controller.level) {
     case 1://300 Energy avilable
       energyToUse = 200;//1 Work; 1 Carry; 1 Move
       probeSetupHarvester = probeSetupHarvesterOne;
@@ -306,13 +309,10 @@ function spawnUpgrader(roomToSpawnFrom: Room): boolean {
   let upgraders = Nexus.getProbes("upgrader", roomToSpawnFrom.name);
   let upgradersAboutToDie = _.filter(upgraders, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
   let controller = GetRoomObjects.getController(roomToSpawnFrom);
-  //let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(harvesters, WORK) + Probe.getActiveBodyPartsFromArrayOfProbes(longDistanceHarvesters, WORK);
+  let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(upgraders, WORK);
   let energyToUse: number;
   //let bodyPartsPerSourceRequired = carriers.length <= 1 ? 2 : 6;//Set Harvester at full capacity only if there are enough carriers to sustain them
   let levelBlueprintToBuild: number;
-
-  //if (harvesters.length >= getMaximumPossibleNumberOfHarvesters(roomToSpawnFrom))
-  //  return false;
 
   if (!controller) {
     return false;
@@ -366,10 +366,10 @@ function spawnUpgrader(roomToSpawnFrom: Room): boolean {
   //  return true;
   //}
 
-  if (upgradersAboutToDie.length == 0 && upgraders.length >= 3) {
+  if (upgradersAboutToDie.length == 0 && workBodyParts >= 5) {
     return false;
   }
-  else if (upgradersAboutToDie.length > 0 && upgraders.length >= 4) {
+  else if (upgradersAboutToDie.length > 0 && workBodyParts >= 10) {
     return false;
   }
 
@@ -378,7 +378,7 @@ function spawnUpgrader(roomToSpawnFrom: Room): boolean {
 }
 
 function spawnLongDistanceHarvester(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean {
-
+  
   for (let i = 0; i < roomsToHarvest.length; i++) {
     let roomConnections = Tasks.getRoomConnections(roomToSpawnFrom);
     if (roomConnections.length != 0 && !roomConnections.includes(roomsToHarvest[i]))
@@ -526,6 +526,7 @@ function spawnClaimer(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean 
 }
 
 function spawnSoldier(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean {
+  
   for (let i = 0; i < roomsToHarvest.length; i++) {
     let roomToHarvest = Game.rooms[roomsToHarvest[i]];
     let roomConnections = Tasks.getRoomConnections(roomToSpawnFrom);
