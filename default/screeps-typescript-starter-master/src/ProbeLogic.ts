@@ -72,16 +72,28 @@ export class ProbeLogic {
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
+      probe.memory.targetId = "";//After a refill probe can choose a different target
     }
     if (_.sum(probe.carry) === 0) {
       probe.memory.isWorking = false;
       probe.memory.isGathering = true;
+      probe.memory.targetId = "";//When gathering it can also go for harvest, so empty targetid to don't mess with harvesting logic.
     }
 
     if (probe.memory.isWorking) {
-      let target = GetRoomObjects.getClosestConstructionSite(probe);
-      if (target) {
-        probe.build(target);
+      if (probe.memory.targetId != "") {
+        let targ = Game.getObjectById(probe.memory.targetId);
+        if (targ instanceof ConstructionSite) {
+          probe.build(targ);
+        } else {
+          probe.memory.targetId = "";//TODO: Kinda going to loose a tick redo this somehow
+        }
+      }
+      else {
+        let target = GetRoomObjects.getClosestConstructionSite(probe);
+        if (target) {
+          probe.build(target);
+        }
       }
     }
     if (probe.memory.isGathering) {
@@ -169,16 +181,28 @@ export class ProbeLogic {
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
+      probe.memory.targetId = "";//After a refill probe can choose a different target
     }
     if (_.sum(probe.carry) === 0) {
       probe.memory.isWorking = false;
       probe.memory.isGathering = true;
+      probe.memory.targetId = "";//When gathering it can also go for harvest, so empty targetid to don't mess with harvesting logic.
     }
 
     if (probe.memory.isWorking) {
-      let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 0.9);
-      if (target) {
-        probe.repair(target);
+      if (probe.memory.targetId != "") {
+        let targ = Game.getObjectById(probe.memory.targetId);
+        if (targ instanceof Structure && targ.hits != targ.hitsMax) {
+          probe.repair(targ);
+        } else {
+          probe.memory.targetId = "";//TODO: Kinda going to loose a tick redo this somehow
+        }
+      }
+      else {
+        let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 0.9);
+        if (target) {
+          probe.repair(target);
+        }
       }
     }
     if (probe.memory.isGathering) {
@@ -323,31 +347,45 @@ export class ProbeLogic {
       if (_.sum(probe.carry) === probe.carryCapacity) {
         probe.memory.isWorking = true;
         probe.memory.isGathering = false;
+        probe.memory.targetId = "";//After a refill probe can choose a different target
       }
       if (_.sum(probe.carry) === 0) {
         probe.memory.isWorking = false;
         probe.memory.isGathering = true;
+        probe.memory.targetId = "";//When gathering it can also go for harvest, so empty targetid to don't mess with harvesting logic.
       }
 
       if (probe.memory.isWorking) {
-        let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 0.4);
-        if (target) {
-          probe.repair(target);
+        if (probe.memory.targetId != "") {
+          let targ = Game.getObjectById(probe.memory.targetId);
+          if (targ instanceof Structure && targ.hits != targ.hitsMax) {
+            probe.repair(targ);
+          } else if (targ instanceof ConstructionSite) {
+            probe.build(targ);
+          } else {
+            probe.memory.targetId = "";//TODO: Kinda going to loose a tick redo this somehow
+          }
         }
         else {
-          let target = GetRoomObjects.getClosestConstructionSite(probe);
+          let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 0.4);
           if (target) {
-            probe.build(target);
+            probe.repair(target);
           }
           else {
-            let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 0.7);
+            let target = GetRoomObjects.getClosestConstructionSite(probe);
             if (target) {
-              probe.repair(target);
+              probe.build(target);
             }
             else {
-              let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 1.0);
+              let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 0.7);
               if (target) {
                 probe.repair(target);
+              }
+              else {
+                let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 1.0);
+                if (target) {
+                  probe.repair(target);
+                }
               }
             }
           }

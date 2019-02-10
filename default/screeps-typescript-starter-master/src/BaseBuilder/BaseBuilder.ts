@@ -1,6 +1,7 @@
 import { BaseLayout, Coord } from "./BaseLayout";
 import { layoutSieve, layoutRooftop, layoutReverseRooftop } from "./Layout";
 import { Helper } from "Helper";
+import { GetRoomObjects } from "GetRoomObjects";
 
 //Flags: Primary - Secondary
 //Layout construction, flag must also be named "ConstructionSite-*" where * is number from 0 to 9
@@ -42,6 +43,7 @@ export class BaseBuilder {
         continue;
       if (_.filter(Game.creeps, (creep) => creep.room == flag.room).length == 0)
         continue;
+      let controller = flag.room ? GetRoomObjects.getController(flag.room) : null;
 
       let layoutToBeUsed: BaseLayout;
       switch (flag.secondaryColor) {
@@ -62,7 +64,9 @@ export class BaseBuilder {
         this.createWall(Game.rooms[flag.pos.roomName], true);
       } else if (flag.color == COLOR_GREY && Game.time % 10 == 0) {//Construct only once every 10th tick
         this.buildBase(flag.pos, layoutToBeUsed, 4, false);
-        this.createWall(Game.rooms[flag.pos.roomName], false);
+        if (controller && controller.level >= 3) {//Build walls only if the controller is at least level 3 because that's when we can build Cannons.
+          this.createWall(Game.rooms[flag.pos.roomName], false);
+        }
       }
     }
 

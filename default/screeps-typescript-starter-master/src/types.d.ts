@@ -9,11 +9,21 @@ interface CreepMemory {
   isWorking: boolean;
   remote: string;
   homeName: string;
+  useCashedPath: boolean;
+  path: string;
+  previousPosition: RoomPosition;
+}
+
+interface Path {
+  start: RoomPosition;
+  finish: RoomPosition;
+  path: string
 }
 
 interface Memory {
   uuid: number;
   log: any;
+  paths: Path[];
 }
 
 // `global` extension samples

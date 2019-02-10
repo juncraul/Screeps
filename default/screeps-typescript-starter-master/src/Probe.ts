@@ -1,3 +1,5 @@
+import { PathLogic } from "PathLogic";
+
 export class Probe {
   creep: Creep; 						// The creep that this wrapper class will control
   body: BodyPartDefinition[];    	 	// These properties are all wrapped from this.creep.* to this.*
@@ -54,25 +56,37 @@ export class Probe {
   build(structure: ConstructionSite) {
     let result = this.creep.build(structure);
     if (result == ERR_NOT_IN_RANGE) {
-      this.goTo(structure.pos);
+      if (this.memory.useCashedPath) {
+        this.goToCashed(structure.pos)
+      } else {
+        this.goTo(structure.pos);
+      }
     }
-    this.memory.targetId = "";
+    this.memory.targetId = structure.id;
     return result;
   }
 
   repair(structure: Structure) {
     let result = this.creep.repair(structure);
     if (result == ERR_NOT_IN_RANGE) {
-      this.goTo(structure.pos);
+      if (this.memory.useCashedPath) {
+        this.goToCashed(structure.pos)
+      } else {
+        this.goTo(structure.pos);
+      }
     }
-    this.memory.targetId = "";
+    this.memory.targetId = structure.id;
     return result;
   }
 
   harvest(source: Source | Mineral) {
     let result = this.creep.harvest(source);
     if (result == ERR_NOT_IN_RANGE) {
-      this.goTo(source.pos);
+      if (this.memory.useCashedPath) {
+        this.goToCashed(source.pos)
+      } else {
+        this.goTo(source.pos);
+      }
     }
     this.memory.targetId = source.id;
     return result;
@@ -86,7 +100,11 @@ export class Probe {
       result = this.creep.transfer(target, resourceType, amount);
     }
     if (result == ERR_NOT_IN_RANGE) {
-      this.goTo(target.pos);
+      if (this.memory.useCashedPath) {
+        this.goToCashed(target.pos)
+      } else {
+        this.goTo(target.pos);
+      }
     }
     return result;
   }
@@ -104,7 +122,11 @@ export class Probe {
       }
     }
     if (result == ERR_NOT_IN_RANGE) {
-      this.goTo(target.pos);
+      if (this.memory.useCashedPath) {
+        this.goToCashed(target.pos)
+      } else {
+        this.goTo(target.pos);
+      }
     }
     return result;
   }
@@ -112,7 +134,11 @@ export class Probe {
   withdraw(target: Tombstone | Structure, resourceType: ResourceConstant, amount?: number) {
     let result = this.creep.withdraw(target, resourceType, amount);
     if (result == ERR_NOT_IN_RANGE) {
-      this.goTo(target.pos);
+      if (this.memory.useCashedPath) {
+        this.goToCashed(target.pos)
+      } else {
+        this.goTo(target.pos);
+      }
     }
     return result;
   }
@@ -132,7 +158,11 @@ export class Probe {
       }
     }
     if (result == ERR_NOT_IN_RANGE) {
-      this.goTo(target.pos);
+      if (this.memory.useCashedPath) {
+        this.goToCashed(target.pos)
+      } else {
+        this.goTo(target.pos);
+      }
     }
     return result;
   }
@@ -140,7 +170,11 @@ export class Probe {
   pickup(resource: Resource) {
     let result = this.creep.pickup(resource);
     if (result == ERR_NOT_IN_RANGE) {
-      this.goTo(resource.pos);
+      if (this.memory.useCashedPath) {
+        this.goToCashed(resource.pos)
+      } else {
+        this.goTo(resource.pos);
+      }
     }
     return result;
   }
@@ -148,7 +182,11 @@ export class Probe {
   upgradeController(controller: StructureController) {
     let result = this.creep.upgradeController(controller);
     if (result == ERR_NOT_IN_RANGE) {
-      this.goTo(controller.pos);
+      if (this.memory.useCashedPath) {
+        this.goToCashed(controller.pos)
+      } else {
+        this.goTo(controller.pos);
+      }
     }
     this.memory.targetId = controller.id;
     return result;
@@ -157,7 +195,11 @@ export class Probe {
   reserve(controller: StructureController) {
     let result = this.creep.reserveController(controller);
     if (result == ERR_NOT_IN_RANGE) {
-      this.goTo(controller.pos);
+      if (this.memory.useCashedPath) {
+        this.goToCashed(controller.pos)
+      } else {
+        this.goTo(controller.pos);
+      }
     }
     this.memory.targetId = controller.id;
     return result;
@@ -167,7 +209,11 @@ export class Probe {
     let result = this.creep.claimController(controller);
     console.log(result);
     if (result == ERR_NOT_IN_RANGE) {
-      this.goTo(controller.pos);
+      if (this.memory.useCashedPath) {
+        this.goToCashed(controller.pos)
+      } else {
+        this.goTo(controller.pos);
+      }
     }
     this.memory.targetId = controller.id;
     return result;
@@ -176,7 +222,11 @@ export class Probe {
   attack(creep: Creep) {
     let result = this.creep.attack(creep);
     if (result == ERR_NOT_IN_RANGE) {
-      this.goTo(creep.pos);
+      if (this.memory.useCashedPath) {
+        this.goToCashed(creep.pos)
+      } else {
+        this.goTo(creep.pos);
+      }
     }
     this.memory.targetId = creep.id;
     return result;
@@ -184,6 +234,21 @@ export class Probe {
 
   goTo(destination: RoomPosition) {
     return this.creep.moveTo(destination);
+  };
+
+  goToCashed(destination: RoomPosition) {
+    let creepGotStuck = JSON.stringify(this.creep.memory.previousPosition) == JSON.stringify(this.creep.pos);
+    if (this.creep.id == "") {
+      console.log(this.creep.memory.path)
+      console.log(this.pos.x + " " + this.pos.y)
+      console.log(destination.x + " " + destination.y)
+      console.log("got stuck" + creepGotStuck)
+    }
+    if (!this.creep.memory.path || creepGotStuck) {
+      this.creep.memory.path = PathLogic.getPath(this.creep.pos, destination, creepGotStuck);
+    }
+    this.creep.memory.previousPosition = this.creep.pos;
+    return this.creep.moveByPath(this.creep.memory.path);
   };
 
   goToDifferentRoom(destination: string) {

@@ -231,16 +231,15 @@ function spawnHarvester(roomToSpawnFrom: Room): boolean {
     }
   }
 
-  if (roomToSpawnFrom.energyAvailable < energyToUse) {
-    return true;
-  }
-  
   if (workBodyParts >= sources * bodyPartsPerSourceRequired) {
     if (harvestersAboutToDie.length == 0 || (harvestersAboutToDie.length > 0 && workBodyParts >= (sources + 1) * bodyPartsPerSourceRequired)) {
       return false;
     }
   }
 
+  if (roomToSpawnFrom.energyAvailable < energyToUse) {
+    return true;//Show our intend to spawn this probe when energy will be available
+  }
   Nexus.spawnCreep(probeSetupHarvester, roomToSpawnFrom, energyToUse);
   return true;
 }
@@ -302,17 +301,16 @@ function spawnCarrier(roomToSpawnFrom: Room): boolean {
     energyToUse = 100;//1 Carry; 1 Move
     probeSetupCarrier = probeSetupCarrierOne;
   }
-
-  if (roomToSpawnFrom.energyAvailable < energyToUse) {
-    return true;
-  }
-
+  
   if (carriers.length >= 2) {
     if (carriersAboutToDie.length == 0 || (carriersAboutToDie.length > 0 && carriers.length >= 3)) {
       return false;
     }
   }
 
+  if (roomToSpawnFrom.energyAvailable < energyToUse) {
+    return true;//Show our intend to spawn this probe when energy will be available
+  }
   Nexus.spawnCreep(probeSetupCarrier, roomToSpawnFrom, energyToUse);
   return true;
 }
@@ -379,10 +377,6 @@ function spawnUpgrader(roomToSpawnFrom: Room): boolean {
   //  }
   //}
 
-  //if (roomToSpawnFrom.energyAvailable < energyToUse) {
-  //  return true;
-  //}
-
   if (upgradersAboutToDie.length == 0 && workBodyParts >= 5) {
     return false;
   }
@@ -390,6 +384,9 @@ function spawnUpgrader(roomToSpawnFrom: Room): boolean {
     return false;
   }
 
+  if (roomToSpawnFrom.energyAvailable < energyToUse) {
+    return true;//Show our intend to spawn this probe when energy will be available
+  }
   Nexus.spawnCreep(probeSetupUpgrader, roomToSpawnFrom, energyToUse);
   return true;
 }
@@ -405,9 +402,10 @@ function spawnLongDistanceHarvester(roomToSpawnFrom: Room, roomsToHarvest: strin
     let sources = roomToHarvest != null ? roomToHarvest.find(FIND_SOURCES).length : 1;
     let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(harvesters, WORK);
     let controller = GetRoomObjects.getController(roomToSpawnFrom);
+    let remoteController = roomToHarvest != null ? GetRoomObjects.getController(roomToHarvest) : null;
     let energyToUse: number;
     let levelBlueprintToBuild: number;
-
+    
     if (!controller) {
       return false;
     }
@@ -429,6 +427,10 @@ function spawnLongDistanceHarvester(roomToSpawnFrom: Room, roomsToHarvest: strin
     if (workBodyParts >= sources * 5  || roomToSpawnFrom.energyAvailable < energyToUse)
       continue;
 
+    if (Tasks.getRoomsToClaim().includes(roomToHarvest.name) && remoteController && remoteController.level >= 3) {
+      continue; //Room is big now to handle its own harvesters
+    }
+
     Nexus.spawnCreep(probeSetupLongDistanceHarvester, roomToSpawnFrom, energyToUse);
     return true;
   }
@@ -442,7 +444,7 @@ function spawnLongDistanceCarrier(roomToSpawnFrom: Room, roomsToHarvest: string[
       continue;
     let bodySetup = { ordered: true, pattern: [CARRY, CARRY, MOVE], sizeLimit: 5 };
     let bodySetupMedium = { ordered: true, pattern: [CARRY, CARRY, MOVE], sizeLimit: 8 };
-    let probeSetupLongDistanceCarrier = new ProbeSetup(bodySetup, "longDistanceCarrier-" + Game.time, { role: "longDistanceCarrier", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
+    let probeSetupLongDistanceCarrier = new ProbeSetup(bodySetup, "longDistanceCarrier-" + Game.time, { role: "longDistanceCarrier", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name, useCashedPath: true });
     let carriers = Nexus.getProbes("longDistanceCarrier", roomsToHarvest[i], true);
     let roomToHarvest = Game.rooms[roomsToHarvest[i]];
     let containers = roomToHarvest != null ? roomToHarvest.find(FIND_STRUCTURES, { filter: (structure) => structure.structureType == STRUCTURE_CONTAINER }).length : 0;
@@ -488,7 +490,7 @@ function spawnLongDistanceBuilder(roomToSpawnFrom: Room, roomsToHarvest: string[
   for (let i = 0; i < roomsToHarvest.length; i++) {
     let roomToHarvest = Game.rooms[roomsToHarvest[i]];
     let roomConnections = Tasks.getRoomConnections(roomToSpawnFrom);
-    if (!roomToHarvest) //Doesn't hurt to build a builder anyway if we lost visibility, will see
+    if (!roomToHarvest) 
       continue;
     if (roomConnections.length != 0 && !roomConnections.includes(roomsToHarvest[i]))
       continue;
@@ -499,7 +501,9 @@ function spawnLongDistanceBuilder(roomToSpawnFrom: Room, roomsToHarvest: string[
     let containers = roomToHarvest.find(FIND_STRUCTURES, { filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.hits < 100000 });
     let energyToUse = 600;//3 Work - 3 Carry - 3 Move = 600
 
-    if (builders.length >= 1 || roomToSpawnFrom.energyAvailable < energyToUse || (constructionPointsInTheRoom < 5000 && containers.length == 0))
+    if (builders.length >= (Tasks.getRoomsToClaim().includes(roomToHarvest.name) ? 3 : 1) || //If we need to claim the room, send a lot of builders to build the base.
+      roomToSpawnFrom.energyAvailable < energyToUse ||
+      (constructionPointsInTheRoom < 5000 && containers.length == 0))
       continue;
 
     Nexus.spawnCreep(probeSetupLongDistanceBuilder, roomToSpawnFrom, energyToUse);
@@ -517,20 +521,43 @@ function spawnClaimer(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean 
       continue;
     if (roomConnections.length != 0 && !roomConnections.includes(roomsToHarvest[i]))
       continue;
-    let probeSetupClaimer = new ProbeSetup({ ordered: true, pattern: [CLAIM, MOVE], sizeLimit: 2 }, "claimer-" + Game.time, { role: "claimer", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
+    let probeSetupClaimer = new ProbeSetup({ ordered: true, pattern: [CLAIM, MOVE], sizeLimit: 4 }, "claimer-" + Game.time, { role: "claimer", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
     let claimers = Nexus.getProbes("claimer", roomsToHarvest[i], true);
     let energyToUse = 650;//1 Claim - 1 Move = 650
     let claimBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(claimers, CLAIM);
-    let controller = GetRoomObjects.getController(roomToHarvest);
+    let controller = GetRoomObjects.getController(roomToSpawnFrom);
+    let remoteController = GetRoomObjects.getController(roomToHarvest);
     let maxClaimer = getMaximumPossibleNumberOfClaimers(roomToHarvest);
+    let levelBlueprintToBuild: number;
 
-    if (claimBodyParts >= 2 || roomToSpawnFrom.energyAvailable < energyToUse || !controller || claimers.length >= maxClaimer )
+    if (!controller) {
+      return false;
+    }
+    else {
+      levelBlueprintToBuild = Game.rooms[roomToSpawnFrom.name].find(FIND_CONSTRUCTION_SITES, { filter: structure => structure.structureType == STRUCTURE_EXTENSION }).length == 0
+        ? controller.level//No extenstions to construct, set blueprint as current controller level.
+        : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level.
+    }//This substruction will not happen when controller.level == 1 because there are no extensions to be built at that time.
+    switch (levelBlueprintToBuild) {
+      case 1:
+      case 2:
+        return false;
+      case 3://800 Energy available
+        energyToUse = 650;//1 Claim - 1 Move
+        break;
+      case 4://1300 Energy available
+      default://1800 Energy at least
+        energyToUse = 1300;//2 Claim - 2 Move
+        break;
+    }
+
+    if (claimBodyParts >= 2 || roomToSpawnFrom.energyAvailable < energyToUse || !remoteController || claimers.length >= maxClaimer )
       continue;
-    if (controller.reservation) {
-      if (controller.reservation.ticksToEnd > 3000)
+    if (remoteController.reservation) {
+      if (remoteController.reservation.ticksToEnd > 3000)
         continue;
     }
-    if (controller.owner) {
+    if (remoteController.owner) {
       continue;
     }
 

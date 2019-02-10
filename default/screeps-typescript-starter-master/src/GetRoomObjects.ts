@@ -47,23 +47,23 @@ export class GetRoomObjects {
       }
     }
     //if (probe.id == "5c5ed1fbaa0b8422e64c9e0f")
-    {
-      console.log("-------------")
-      console.log(probe.creep.id);
-      console.log("sources - " + sources)
-      console.log("prev ass: " + previouslyAssignedTo);
-      console.log("max : " + maxCount);
-      console.log("min : " + minCount);
-    }
+    //{
+    //  console.log("-------------")
+    //  console.log(probe.creep.id);
+    //  console.log("sources - " + sources)
+    //  console.log("prev ass: " + previouslyAssignedTo);
+    //  console.log("max : " + maxCount);
+    //  console.log("min : " + minCount);
+    //}
 
     if (minIndex != undefined) {
       //if (probe.id == "5c5ed1fbaa0b8422e64c9e0f")
-      {
-        console.log("sources - " + sources)
-        console.log("index 0 - " + sources[0] + " " + arraySources[0])
-        console.log("index 1 - " + sources[1] + " " + arraySources[1])
-        console.log("index m - " + sources[minIndex] + " " + arraySources[minIndex])
-      }
+      //{
+      //  console.log("sources - " + sources)
+      //  console.log("index 0 - " + sources[0] + " " + arraySources[0])
+      //  console.log("index 1 - " + sources[1] + " " + arraySources[1])
+      //  console.log("index m - " + sources[minIndex] + " " + arraySources[minIndex])
+      //}
       let source: Mineral | Source | null;
       if (arraySources[minIndex] == arraySources[secondMinIndex]) {
         source = probe.pos.findPathTo(sources[minIndex]).length < probe.pos.findPathTo(sources[secondMinIndex]).length ? sources[minIndex] : sources[secondMinIndex];
@@ -219,7 +219,7 @@ export class GetRoomObjects {
       filter: structure => (structure.hits < structure.hitsMax * damageProportionForNonWallRamp)
         && ((includeRampartsWalls) || (!includeRampartsWalls && structure.structureType != STRUCTURE_WALL && structure.structureType != STRUCTURE_RAMPART))
     });
-    if (!structure) {
+    if (!structure && includeRampartsWalls) {
       for (let i = 0.00001; i < 1 && !structure; i *= 2) {
         structure = pos.findClosestByPath(FIND_STRUCTURES, {
           filter: structure =>

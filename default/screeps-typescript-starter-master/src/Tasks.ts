@@ -21,7 +21,7 @@ export class Tasks {
       case "shard2"://Public
         return [];
       case "shard3"://Public Free-Subscription
-        return [];
+        return ["E32N44"];
       default:
         return [];
     }
