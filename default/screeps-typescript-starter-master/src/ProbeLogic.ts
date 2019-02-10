@@ -1,6 +1,7 @@
 import { Probe } from "Probe";
 import { Tasks } from "Tasks";
 import { GetRoomObjects } from "GetRoomObjects";
+import { MY_SIGNATURE } from "Constants";
 
 export class ProbeLogic {
 
@@ -36,13 +37,16 @@ export class ProbeLogic {
     }
 
     if (probe.memory.isWorking) {
-      let target = GetRoomObjects.getController(probe);
-      if (target) {
-        probe.upgradeController(target);
+      let controller = GetRoomObjects.getController(probe);
+      if (controller) {
+        if (Game.time % 1000 == 0) {
+          probe.sign(controller, MY_SIGNATURE);
+        }
+        probe.upgradeController(controller);
       }
     }
     if (probe.memory.isGathering) {
-      let deposit = GetRoomObjects.getClosestFilledDeposit(probe, false, false, 300);
+      let deposit = GetRoomObjects.getClosestFilledDeposit(probe, false, false, false, 300);
       if (deposit) {
         probe.withdraw(deposit, RESOURCE_ENERGY);
       } else {
@@ -101,7 +105,7 @@ export class ProbeLogic {
       let controller = GetRoomObjects.getController(probe.room);
       if (controller && controller.level < 3)
         allowToGetAbove = 200;//We are at the beginning allow to take from smaller deposits
-      let deposit = GetRoomObjects.getClosestFilledDeposit(probe, false, false, allowToGetAbove);
+      let deposit = GetRoomObjects.getClosestFilledDeposit(probe, false, false, false, allowToGetAbove);
       if (deposit) {
         probe.withdraw(deposit, RESOURCE_ENERGY);
       } else {
@@ -161,18 +165,24 @@ export class ProbeLogic {
       }
     }
     if (probe.memory.isGathering) {
-      let deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, true, 200, false);
+      let deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, true, true, 200, false);
       if (deposit) {
         probe.withdrawAll(deposit);
       } else {
-        deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, false, 200, false);
-        if (deposit) {
-          probe.withdrawAll(deposit);
+        let droppedResource = GetRoomObjects.getDroppedResource(probe.pos);
+        if (droppedResource) {
+          probe.pickup(droppedResource);
         }
-      }
-      if (!deposit && _.sum(probe.carry) > 0) {//Instead of waiting for a deposit to fill up, just return back what it currenlty has.
-        probe.memory.isWorking = true;
-        probe.memory.isGathering = false;
+        else {
+          deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, true, false, 200, false);
+          if (deposit) {
+            probe.withdrawAll(deposit);
+          }
+        }
+        if (!deposit && _.sum(probe.carry) > 0) {//Instead of waiting for a deposit to fill up, just return back what it currenlty has.
+          probe.memory.isWorking = true;
+          probe.memory.isGathering = false;
+        }
       }
     }
   }
@@ -199,14 +209,14 @@ export class ProbeLogic {
         }
       }
       else {
-        let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 0.9);
+        let target = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 0.9);
         if (target) {
           probe.repair(target);
         }
       }
     }
     if (probe.memory.isGathering) {
-      let deposit = GetRoomObjects.getClosestFilledDeposit(probe, false, false, 300);
+      let deposit = GetRoomObjects.getClosestFilledDeposit(probe, false, false, false, 300);
       if (deposit) {
         probe.withdraw(deposit, RESOURCE_ENERGY);
       } else {
@@ -255,7 +265,7 @@ export class ProbeLogic {
           if (deposit) {
             probe.transfer(deposit, RESOURCE_ENERGY);
           } else {
-            let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 0.4);
+            let target = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 0.4);
             if (target) {
               probe.repair(target);
             }
@@ -265,12 +275,12 @@ export class ProbeLogic {
                 probe.build(target);
               }
               else {
-                let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 0.7);
+                let target = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 0.7);
                 if (target) {
                   probe.repair(target);
                 }
                 else {
-                  let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 1.0);
+                  let target = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 1.0);
                   if (target) {
                     probe.repair(target);
                   }
@@ -315,12 +325,12 @@ export class ProbeLogic {
           probe.pickup(droppedResource);
         }
         else {
-          let deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, false, probe.carryCapacity - _.sum(probe.carry));
+          let deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, false, false, probe.carryCapacity - _.sum(probe.carry));
           if (deposit) {
             probe.withdraw(deposit, RESOURCE_ENERGY);
           }
           else {
-            let deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, false, 0);
+            let deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, false, false, 0);
             if (deposit) {
               probe.withdraw(deposit, RESOURCE_ENERGY);
             }
@@ -367,7 +377,7 @@ export class ProbeLogic {
           }
         }
         else {
-          let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 0.4);
+          let target = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 0.4);
           if (target) {
             probe.repair(target);
           }
@@ -377,12 +387,12 @@ export class ProbeLogic {
               probe.build(target);
             }
             else {
-              let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 0.7);
+              let target = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 0.7);
               if (target) {
                 probe.repair(target);
               }
               else {
-                let target = GetRoomObjects.getClosestStructureToRepair(probe.pos, 1.0);
+                let target = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 1.0);
                 if (target) {
                   probe.repair(target);
                 }
@@ -392,7 +402,7 @@ export class ProbeLogic {
         }
       }
       if (probe.memory.isGathering) {
-        let deposit = GetRoomObjects.getClosestFilledDeposit(probe, false, false, 100);
+        let deposit = GetRoomObjects.getClosestFilledDeposit(probe, false, true, false, 100);
         if (deposit) {
           probe.withdraw(deposit, RESOURCE_ENERGY);
         } else {
@@ -424,6 +434,9 @@ export class ProbeLogic {
     } else {
       let controller = GetRoomObjects.getController(probe);
       if (controller) {
+        if (Game.time % 1000 == 0) {
+          probe.sign(controller, MY_SIGNATURE);
+        }
         if (Tasks.getRoomsToClaim().includes(probe.room.name)) {
           probe.claim(controller);
         } else {

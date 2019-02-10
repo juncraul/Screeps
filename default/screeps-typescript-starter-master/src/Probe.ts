@@ -232,6 +232,19 @@ export class Probe {
     return result;
   }
 
+  sign(controller: StructureController, text: string) {
+    let result = this.creep.signController(controller, text);
+    if (result == ERR_NOT_IN_RANGE) {
+      if (this.memory.useCashedPath) {
+        this.goToCashed(controller.pos)
+      } else {
+        this.goTo(controller.pos);
+      }
+    }
+    this.memory.targetId = controller.id;
+    return result;
+  }
+
   goTo(destination: RoomPosition) {
     return this.creep.moveTo(destination);
   };

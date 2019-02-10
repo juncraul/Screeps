@@ -30,7 +30,7 @@ export class Nexus {
     return result;
   }
 
-  public static getProbes(role?: string, room?: string, checkRemote?: boolean): Probe[] {
+  public static getProbes(role?: string, room?: string, checkRemote: boolean = false): Probe[] {
     let creeps;
     if (role == undefined) {
       creeps = _.filter(Game.creeps, (creep) => true);
@@ -38,7 +38,7 @@ export class Nexus {
     else {
       if (room == undefined) {
         creeps = _.filter(Game.creeps, (creep) => creep.memory.role == role);
-      } else if (checkRemote == undefined || !checkRemote) {
+      } else if (!checkRemote) {
         creeps = _.filter(Game.creeps, (creep) => creep.memory.role == role && creep.room.name == room);
       } else {
         creeps = _.filter(Game.creeps, (creep) => creep.memory.role == role && creep.memory.remote == room);

@@ -107,7 +107,7 @@ export class GetRoomObjects {
     return deposit;
   }
 
-  public static getClosestFilledDeposit(probe: Probe, excludeControllerDeposit: boolean, excludeStorage: boolean, whenIsMoreThan: number, onlyEnergy: boolean = true): Structure | null {
+  public static getClosestFilledDeposit(probe: Probe, excludeControllerDeposit: boolean, excludeStorage: boolean, excludeSpawn: boolean, whenIsMoreThan: number, onlyEnergy: boolean = true): Structure | null {
     let controllerDeposits = GetRoomObjects.getDepositNextToController(probe.room, false);
     let previousDeposit = probe.room.find(FIND_STRUCTURES, {
       filter: structure => structure.id == probe.memory.targetId &&
@@ -126,7 +126,7 @@ export class GetRoomObjects {
             (structure.structureType == STRUCTURE_LINK && structure.energy > whenIsMoreThan))
             && (!excludeControllerDeposit || (excludeControllerDeposit && !controllerDeposits.includes(structure))))
       })
-      if (!deposit) {
+      if (!deposit && !excludeSpawn) {
         deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
           filter: structure => structure.structureType == STRUCTURE_SPAWN && structure.energy > whenIsMoreThan
         })
@@ -214,7 +214,7 @@ export class GetRoomObjects {
     return deposits;
   }
 
-  public static getClosestStructureToRepair(pos: RoomPosition, damageProportionForNonWallRamp: number, includeRampartsWalls: boolean = false): Structure | null {
+  public static getClosestStructureToRepairByPath(pos: RoomPosition, damageProportionForNonWallRamp: number, includeRampartsWalls: boolean = false): Structure | null {
     let structure = pos.findClosestByPath(FIND_STRUCTURES, {
       filter: structure => (structure.hits < structure.hitsMax * damageProportionForNonWallRamp)
         && ((includeRampartsWalls) || (!includeRampartsWalls && structure.structureType != STRUCTURE_WALL && structure.structureType != STRUCTURE_RAMPART))
@@ -222,6 +222,29 @@ export class GetRoomObjects {
     if (!structure && includeRampartsWalls) {
       for (let i = 0.00001; i < 1 && !structure; i *= 2) {
         structure = pos.findClosestByPath(FIND_STRUCTURES, {
+          filter: structure =>
+            (structure.structureType != STRUCTURE_RAMPART && structure.hits < structure.hitsMax * i) ||
+            (structure.structureType == STRUCTURE_RAMPART && structure.hits < structure.hitsMax * i * 300) //Ramparts are 300 times smaller than wall
+        })
+      }
+    }
+    return structure;
+  }
+
+  public static getClosestStructureToRepairByRange(pos: RoomPosition, damageProportionForNonWallRamp: number, includeRampartsWalls: boolean = false): Structure | null {
+    let structure = pos.findClosestByRange(FIND_STRUCTURES, {
+      filter: structure =>
+        (structure.structureType == STRUCTURE_RAMPART && structure.hits < 5000) //Just choose low life ramparts first, as they degrade quickly
+    })
+    if (!structure) {
+      structure = pos.findClosestByRange(FIND_STRUCTURES, {
+        filter: structure => (structure.hits < structure.hitsMax * damageProportionForNonWallRamp)
+          && ((includeRampartsWalls) || (!includeRampartsWalls && structure.structureType != STRUCTURE_WALL && structure.structureType != STRUCTURE_RAMPART))
+      });
+    }
+    if (!structure && includeRampartsWalls) {
+      for (let i = 0.00001; i < 1 && !structure; i *= 2) {
+        structure = pos.findClosestByRange(FIND_STRUCTURES, {
           filter: structure =>
             (structure.structureType != STRUCTURE_RAMPART && structure.hits < structure.hitsMax * i) ||
             (structure.structureType == STRUCTURE_RAMPART && structure.hits < structure.hitsMax * i * 300) //Ramparts are 300 times smaller than wall
