@@ -174,9 +174,11 @@ export class GetRoomObjects {
   public static getStructureDepositToSupply(probe: Probe): Structure | null {
     let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
       filter: structure => (
-        (structure.structureType == STRUCTURE_STORAGE ||
-          structure.structureType == STRUCTURE_TERMINAL) && _.sum(structure.store) < structure.storeCapacity)
+        ((structure.structureType == STRUCTURE_STORAGE ||
+          structure.structureType == STRUCTURE_TERMINAL) && _.sum(structure.store) < structure.storeCapacity))
+        || (structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity * 0.90)
     });
+
     return deposit
   }
 
@@ -219,7 +221,11 @@ export class GetRoomObjects {
     });
     if (!structure) {
       for (let i = 0.00001; i < 1 && !structure; i *= 2) {
-        structure = pos.findClosestByPath(FIND_STRUCTURES, { filter: structure => (structure.hits < structure.hitsMax * i) })
+        structure = pos.findClosestByPath(FIND_STRUCTURES, {
+          filter: structure =>
+            (structure.structureType != STRUCTURE_RAMPART && structure.hits < structure.hitsMax * i) ||
+            (structure.structureType == STRUCTURE_RAMPART && structure.hits < structure.hitsMax * i * 300) //Ramparts are 300 times smaller than wall
+        })
       }
     }
     return structure;

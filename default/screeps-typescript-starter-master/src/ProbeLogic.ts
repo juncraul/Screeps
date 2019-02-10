@@ -5,7 +5,7 @@ import { GetRoomObjects } from "GetRoomObjects";
 export class ProbeLogic {
 
   public static harvesterLogic(probe: Probe): void {
-    if (_.sum(probe.carry) === probe.carryCapacity) {
+    if (_.sum(probe.carry) === probe.carryCapacity && probe.carryCapacity != 0) {
       let deposit = GetRoomObjects.getClosestEmptyDeposit(probe);
       if (deposit) {
         probe.transferAll(deposit);
@@ -212,7 +212,7 @@ export class ProbeLogic {
       probe.goToDifferentRoom(probe.memory.remote);
     }
     else {
-      if (_.sum(probe.carry) === probe.carryCapacity) {
+      if (_.sum(probe.carry) === probe.carryCapacity && probe.carryCapacity != 0) {
         probe.memory.isWorking = true;
         probe.memory.isGathering = false;
       }
