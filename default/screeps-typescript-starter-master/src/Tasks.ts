@@ -8,7 +8,7 @@ export class Tasks {
       case "shard2"://Public
         return ["W33S54", "W32S55", "W31S55", "W32S56", "W34S53", "W32S53", "W33S52", "W32S54", "W31S53", "W34S52", "W34S51", "W31S51"];
       case "shard3"://Public Free-Subscription
-        return ["E33N45", "E33N43", "E32N45", "E32N44", "E31N44", "E33N42"];
+        return ["E33N45", "E33N43", "E32N45", "E32N44", "E31N44", "E33N42", "E32N43", "E33N46", "E31N49"];
       default:
         return [];
     }
@@ -21,13 +21,13 @@ export class Tasks {
       case "shard2"://Public
         return [];
       case "shard3"://Public Free-Subscription
-        return ["E32N44"];
+        return ["E32N44", "E32N45"];
       default:
         return [];
     }
   }
 
-  public static getRoomConnections(room: Room) {
+  public static getRoomConnections(room: Room): string[] {
     switch (Game.shard.name) {
       case "Jalapeno"://Private
         switch (room.name) {
@@ -56,9 +56,33 @@ export class Tasks {
       case "shard3"://Public Free-Subscription
         switch (room.name) {
           case "E33N44":
-            return ["E33N45", "E33N43", "E32N45", "E33N42", "E32N44"];
+            return ["E33N45", "E33N43", "E33N42", "E32N44", "E33N46", "E32N45"];
           case "E32N44":
-            return ["E31N44"]
+            return ["E31N44", "E32N43", "E32N45", "E31N49"]
+          default:
+            return []
+        }
+      default:
+        return [];
+    }
+  }
+
+  public static getFarAwayRoomPath(roomName: string): string[] {
+    switch (Game.shard.name) {
+      case "Jalapeno"://Private
+        switch (roomName) {
+          default:
+            return []
+        }
+      case "shard2"://Public
+        switch (roomName) {
+          default:
+            return []
+        }
+      case "shard3"://Public Free-Subscription
+        switch (roomName) {
+          case "E31N49":
+            return ["E33N44", "E33N45", "E32N45", "E32N44", "E31N44", "E30N44", "E30N45" ,"E30N46", "E30N47", "E30N48", "E30N49", "E31N49"];
           default:
             return []
         }

@@ -166,6 +166,9 @@ export class ProbeLogic {
     }
     if (probe.memory.isGathering) {
       let deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, true, true, 200, false);
+      if (!Game.flags["WAR"] && !deposit) {
+        deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, false, true, 200, false);//If at war, pick up from storage as well
+      } 
       if (deposit) {
         probe.withdrawAll(deposit);
       } else {
@@ -243,7 +246,7 @@ export class ProbeLogic {
 
   public static longDistanceHarvesterLogic(probe: Probe): void {
     if (probe.room.name != probe.memory.remote) {
-      probe.goToDifferentRoom(probe.memory.remote);
+      ProbeLogic.goToRemoteRoom(probe, probe.memory.remote);
     }
     else {
       if (_.sum(probe.carry) === probe.carryCapacity && probe.carryCapacity != 0) {
@@ -340,8 +343,9 @@ export class ProbeLogic {
     }
     if (probe.memory.isWorking) {
       if (probe.room.name != probe.memory.homeName) {
-        probe.goToDifferentRoom(probe.memory.homeName);
-      } else {
+        ProbeLogic.goToRemoteRoom(probe, probe.memory.homeName);
+      }
+      else {
         let supply = GetRoomObjects.getStructureToSupplyByRemoteWorkers(probe);
         if (supply) {
           probe.transfer(supply, RESOURCE_ENERGY);
@@ -352,8 +356,9 @@ export class ProbeLogic {
 
   public static longDistanceBuilderLogic(probe: Probe): void {
     if (probe.room.name != probe.memory.remote) {
-      probe.goToDifferentRoom(probe.memory.remote);
-    } else {
+      ProbeLogic.goToRemoteRoom(probe, probe.memory.remote);
+    }
+    else {
       if (_.sum(probe.carry) === probe.carryCapacity) {
         probe.memory.isWorking = true;
         probe.memory.isGathering = false;
@@ -430,8 +435,9 @@ export class ProbeLogic {
 
   public static claimerLogic(probe: Probe): void {
     if (probe.room.name != probe.memory.remote) {
-      probe.goToDifferentRoom(probe.memory.remote);
-    } else {
+      ProbeLogic.goToRemoteRoom(probe, probe.memory.remote);
+    }
+    else {
       let controller = GetRoomObjects.getController(probe);
       if (controller) {
         if (Game.time % 1000 == 0) {
@@ -448,11 +454,107 @@ export class ProbeLogic {
 
   public static soldierLogic(probe: Probe): void {
     if (probe.room.name != probe.memory.remote) {
-      probe.goToDifferentRoom(probe.memory.remote);
-    } else {
+      ProbeLogic.goToRemoteRoom(probe, probe.memory.remote);
+    }
+    else {
       let enemy = GetRoomObjects.getClosestEnemy(probe);
       if (enemy) {
         probe.attack(enemy);
+      }
+    }
+  }
+
+  public static armyAttackerLogic(probe: Probe): void {
+    var flagToAttachFrom = Game.flags["WAR"];
+    if (!flagToAttachFrom) {
+      flagToAttachFrom = Game.flags["WAR Over"];//This flag is used just here, it is not used for reproduction
+    }
+    if (!flagToAttachFrom)
+      return;
+
+    if (flagToAttachFrom == null) {
+      return;
+    }
+
+    var roomToAttack = flagToAttachFrom.pos;
+
+    if (roomToAttack != null) {
+      if (probe.room.name != roomToAttack.roomName) {
+        probe.creep.moveTo(roomToAttack);
+        return;
+      }
+      else {
+        const targetCreepsFromFlag = flagToAttachFrom.pos.findInRange(FIND_HOSTILE_CREEPS, 1);
+        const targetStructuresFromFlag = flagToAttachFrom.pos.findInRange(FIND_HOSTILE_STRUCTURES, 1);
+        const targetCreeps = targetCreepsFromFlag.length == 0 ? probe.pos.findClosestByPath(FIND_HOSTILE_CREEPS) : targetCreepsFromFlag[0];
+        const targetStructures = targetStructuresFromFlag.length == 0 ? probe.pos.findClosestByPath(FIND_HOSTILE_STRUCTURES) : targetStructuresFromFlag[0];
+        if (targetStructures) {
+          if (probe.attack(targetStructures) == ERR_NOT_IN_RANGE) {//This quite not work, have to analyze it, probes still targeted other creeps
+            probe.creep.moveTo(targetStructures, { visualizePathStyle: { stroke: '#ff0000' } });
+          }
+          if (probe.creep.rangedAttack(targetStructures) == ERR_NOT_IN_RANGE) {
+            probe.creep.moveTo(targetStructures, { visualizePathStyle: { stroke: '#ff0000' } });
+          }
+        } else if (targetCreeps && targetCreeps.pos.x != 0 && targetCreeps.pos.y != 0 && targetCreeps.pos.x != 49 && targetCreeps.pos.y != 49) {
+          if (probe.attack(targetCreeps) == ERR_NOT_IN_RANGE) {
+            probe.creep.moveTo(targetCreeps, { visualizePathStyle: { stroke: '#ff0000' } });
+          }
+          if (probe.creep.rangedAttack(targetCreeps) == ERR_NOT_IN_RANGE) {
+            probe.creep.moveTo(targetCreeps, { visualizePathStyle: { stroke: '#ff0000' } });
+          }
+        }
+        else {
+          probe.creep.moveTo(flagToAttachFrom, { visualizePathStyle: { stroke: '#ff0000' } });
+        }
+      }
+    }
+  }
+
+  public static armyHealerLogic(probe: Probe): void {
+    var flagToAttachFrom = Game.flags["WAR"];
+    if (!flagToAttachFrom) {
+      flagToAttachFrom = Game.flags["WAR Over"];//This flag is used just here, it is not used for reproduction
+    }
+    if (!flagToAttachFrom)
+      return;
+
+    var roomToAttack = flagToAttachFrom.pos;
+
+    if (roomToAttack != null) {
+      if (probe.room.name != roomToAttack.roomName) {
+        probe.creep.moveTo(roomToAttack);
+        return;
+      }
+      else {
+        var wondedCreep = probe.pos.findClosestByRange(FIND_MY_CREEPS, { filter: function (object) { return object.hits < object.hitsMax } });
+
+        if (wondedCreep && wondedCreep.pos.x != 0 && wondedCreep.pos.y != 0 && wondedCreep.pos.x != 49 && wondedCreep.pos.y != 49) {
+          if (probe.creep.heal(wondedCreep) == ERR_NOT_IN_RANGE) {
+            if (wondedCreep)
+              probe.creep.moveTo(wondedCreep, { visualizePathStyle: { stroke: '#00ff00' } });
+          }
+        }
+        else {
+          probe.creep.moveTo(flagToAttachFrom, { visualizePathStyle: { stroke: '#00ff00' } });
+        }
+      }
+    }
+  }
+
+  private static goToRemoteRoom(probe: Probe, roomName: string) {
+    let path = Tasks.getFarAwayRoomPath(roomName);
+    if (path.length == 0) {
+      probe.goToDifferentRoom(roomName);
+    } else {
+      let foundCurrentRoom = false;
+      for (let currenRoom in path) {
+        if (foundCurrentRoom) {
+          probe.goToDifferentRoom(currenRoom);
+          break;
+        }
+        if (currenRoom == probe.room.name) {
+          foundCurrentRoom = true;
+        }
       }
     }
   }

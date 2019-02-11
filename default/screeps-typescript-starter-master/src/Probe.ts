@@ -207,7 +207,6 @@ export class Probe {
 
   claim(controller: StructureController) {
     let result = this.creep.claimController(controller);
-    console.log(result);
     if (result == ERR_NOT_IN_RANGE) {
       if (this.memory.useCashedPath) {
         this.goToCashed(controller.pos)
@@ -219,7 +218,7 @@ export class Probe {
     return result;
   }
 
-  attack(creep: Creep) {
+  attack(creep: Creep | Structure) {
     let result = this.creep.attack(creep);
     if (result == ERR_NOT_IN_RANGE) {
       if (this.memory.useCashedPath) {
@@ -246,12 +245,17 @@ export class Probe {
   }
 
   goTo(destination: RoomPosition) {
+    if (this.creep.id == "5c61f13006153717958489b7") {
+      console.log(this.creep.memory.path)
+      console.log(this.pos.x + " " + this.pos.y)
+      console.log(destination.x + " " + destination.y)
+    }
     return this.creep.moveTo(destination);
   };
 
   goToCashed(destination: RoomPosition) {
     let creepGotStuck = JSON.stringify(this.creep.memory.previousPosition) == JSON.stringify(this.creep.pos);
-    if (this.creep.id == "") {
+    if (this.creep.id == "5c61f13006153717958489b7") {
       console.log(this.creep.memory.path)
       console.log(this.pos.x + " " + this.pos.y)
       console.log(destination.x + " " + destination.y)

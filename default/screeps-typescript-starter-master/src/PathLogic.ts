@@ -53,7 +53,7 @@ export class PathLogic {
         if (e != BreakException)
           throw e;
       }
-      Memory.paths.splice(i);
+      Memory.paths.splice(i, 1);
     }
     Memory.paths.push(newPath);
     return newPath.path;

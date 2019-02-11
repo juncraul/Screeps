@@ -33,6 +33,15 @@ export function run(): void {
       else if (spawnSoldierForConqueredRoom(room)) {
         console.log(room.name + " Spawning soldier for this room.");
       }
+      else if (spawnArmyElite(room)) {
+        console.log(room.name + " Spawning Army Elite")
+      }
+      else if (spawnArmyAttacker(room) && Game.time == 1) {
+        console.log(room.name + " Spawning Army Attacker")
+      }
+      else if (spawnArmyHealer(room)) {
+        console.log(room.name + " Spawning Army Healer")
+      }
       else if (spawnUpgrader(room)) {
         console.log(room.name + " Spawning Upgrader");
       }
@@ -108,6 +117,12 @@ export function run(): void {
       case "longDistanceBuilder":
         ProbeLogic.longDistanceBuilderLogic(probe);
         break;
+      case "armyAttacker":
+        ProbeLogic.armyAttackerLogic(probe);
+        break;
+      case "armyHealer":
+        ProbeLogic.armyHealerLogic(probe);
+        break;
     }
   });
 }
@@ -123,12 +138,12 @@ function cannonLogic(cannon: Cannon): void {
       cannon.heal(damagedUnit);
     }
     else if (cannon.energy > cannon.energyCapacity * 0.5) {
-      let structure = GetRoomObjects.getClosestStructureToRepairByRange(cannon.pos, 0.7);
+      let structure = GetRoomObjects.getClosestStructureToRepairByRange(cannon.pos, 0.5);
       if (structure) {
         cannon.repair(structure);
       }
       else {
-        let structure = GetRoomObjects.getClosestStructureToRepairByRange(cannon.pos, 1);
+        let structure = GetRoomObjects.getClosestStructureToRepairByRange(cannon.pos, 0.8);
         if (structure) {
           cannon.repair(structure);
         }
@@ -403,7 +418,8 @@ function spawnLongDistanceHarvester(roomToSpawnFrom: Room, roomsToHarvest: strin
     let roomConnections = Tasks.getRoomConnections(roomToSpawnFrom);
     if (roomConnections.length != 0 && !roomConnections.includes(roomsToHarvest[i]))
       continue;
-    let probeSetupLongDistanceHarvester = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [MOVE, MOVE, MOVE], proportionalPrefixSuffix: false, sizeLimit: 5 }, "longDistanceHarvester-" + Game.time, { role: "longDistanceHarvester", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
+    let probeSetupLongDistanceHarvester = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [MOVE, MOVE, MOVE], proportionalPrefixSuffix: false, sizeLimit: 5 }, "longDistanceHarvester-" + roomsToHarvest[i] + "-" + Game.time, { role: "longDistanceHarvester", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
+    let probeSetupLongDistanceHarvesterElite = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [MOVE, MOVE, MOVE, MOVE, MOVE], proportionalPrefixSuffix: false, sizeLimit: 5 }, "longDistanceHarvester-" + Game.time, { role: "longDistanceHarvester", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
     let harvesters = Nexus.getProbes("longDistanceHarvester", roomsToHarvest[i], true);
     let roomToHarvest = Game.rooms[roomsToHarvest[i]];
     let sources = roomToHarvest != null ? roomToHarvest.find(FIND_SOURCES).length : 1;
@@ -427,8 +443,10 @@ function spawnLongDistanceHarvester(roomToSpawnFrom: Room, roomsToHarvest: strin
       case 2:
         return false;
       case 3://800 Energy available
-      default://1300 Energy at least
         energyToUse = 650;//5 Work; 3 Move //This reply that it stands on top of container
+      default://1300 Energy at least
+        energyToUse = 750;//5 Work; 5 Move //This reply that it stands on top of container
+        probeSetupLongDistanceHarvester = probeSetupLongDistanceHarvesterElite
         break;
     }
 
@@ -454,7 +472,7 @@ function spawnLongDistanceCarrier(roomToSpawnFrom: Room, roomsToHarvest: string[
       continue;
     let bodySetup = { ordered: true, pattern: [CARRY, CARRY, MOVE], sizeLimit: 5 };
     let bodySetupMedium = { ordered: true, pattern: [CARRY, CARRY, MOVE], sizeLimit: 8 };
-    let probeSetupLongDistanceCarrier = new ProbeSetup(bodySetup, "longDistanceCarrier-" + Game.time, { role: "longDistanceCarrier", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name, useCashedPath: true });
+    let probeSetupLongDistanceCarrier = new ProbeSetup(bodySetup, "longDistanceCarrier-" + roomsToHarvest[i] + "-"  + Game.time, { role: "longDistanceCarrier", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name, useCashedPath: true });
     let carriers = Nexus.getProbes("longDistanceCarrier", roomsToHarvest[i], true);
     let roomToHarvest = Game.rooms[roomsToHarvest[i]];
     let containers = roomToHarvest != null ? roomToHarvest.find(FIND_STRUCTURES, { filter: (structure) => structure.structureType == STRUCTURE_CONTAINER }).length : 0;
@@ -505,7 +523,7 @@ function spawnLongDistanceBuilder(roomToSpawnFrom: Room, roomsToHarvest: string[
       continue;
     if (roomConnections.length != 0 && !roomConnections.includes(roomsToHarvest[i]))
       continue;
-    let probeSetupLongDistanceBuilder = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 5 }, "longDistanceBuilder-" + Game.time, { role: "longDistanceBuilder", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
+    let probeSetupLongDistanceBuilder = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 5 }, "longDistanceBuilder-" + roomsToHarvest[i] + "-"  + Game.time, { role: "longDistanceBuilder", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
     let builders = Nexus.getProbes("longDistanceBuilder", roomsToHarvest[i], true);
     let constructionSites = roomToHarvest.find(FIND_CONSTRUCTION_SITES);
     let constructionPointsInTheRoom = constructionSites.length > 0 ? constructionSites.map(item => item.progressTotal - item.progress).reduce((prev, next) => prev + next) : 0;
@@ -540,7 +558,7 @@ function spawnClaimer(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean 
       continue;
     if (roomConnections.length != 0 && !roomConnections.includes(roomsToHarvest[i]))
       continue;
-    let probeSetupClaimer = new ProbeSetup({ ordered: true, pattern: [CLAIM, MOVE], sizeLimit: 4 }, "claimer-" + Game.time, { role: "claimer", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
+    let probeSetupClaimer = new ProbeSetup({ ordered: true, pattern: [CLAIM, MOVE], sizeLimit: 4 }, "claimer-" + roomsToHarvest[i] + "-"  + Game.time, { role: "claimer", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
     let claimers = Nexus.getProbes("claimer", roomsToHarvest[i], true);
     let energyToUse = 650;//1 Claim - 1 Move = 650
     let claimBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(claimers, CLAIM);
@@ -595,7 +613,7 @@ function spawnSoldier(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean 
       continue;
     if (roomConnections.length != 0 && !roomConnections.includes(roomsToHarvest[i]))
       continue;
-    let probeSetupSoldier = new ProbeSetup({ ordered: true, prefix: [TOUGH, TOUGH, TOUGH], pattern: [ATTACK, MOVE], sizeLimit: 3 }, "soldier-" + Game.time, { role: "soldier", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
+    let probeSetupSoldier = new ProbeSetup({ ordered: true, prefix: [TOUGH, TOUGH, TOUGH], pattern: [ATTACK, MOVE], sizeLimit: 3 }, "soldier-" + roomsToHarvest[i] + "-"  + Game.time, { role: "soldier", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
     let soldiers = Nexus.getProbes("soldier", roomsToHarvest[i], true);
     let energyToUse = 570;//3 TOUGH - 3 Attack - 6 Move = 570
     let enemyInRoom = GetRoomObjects.getClosestEnemy(roomToHarvest);
@@ -607,6 +625,53 @@ function spawnSoldier(roomToSpawnFrom: Room, roomsToHarvest: string[]): boolean 
     return true;
   }
   return false;
+}
+
+function spawnArmyAttacker(roomToSpawnFrom: Room): boolean {
+  if (!Game.flags["WAR"])
+    return false;
+  let armyAttacker = Nexus.getProbes("armyAttacker");
+  let armyHealer = Nexus.getProbes("armyHealer");
+  if (armyAttacker.length * 2 > armyHealer.length)
+    return false;
+  let probeSetupSoldier = new ProbeSetup({ ordered: true, prefix: [TOUGH, TOUGH, TOUGH], pattern: [RANGED_ATTACK, MOVE], suffix: [MOVE, MOVE], sizeLimit: 3 }, "soldier-" + Game.time, { role: "armyAttacker", homeName: roomToSpawnFrom.name });
+  let energyToUse = 1150;//3 TOUGH - 5 RANGED_ATTACK - 5 Move = 1150
+
+  Nexus.spawnCreep(probeSetupSoldier, roomToSpawnFrom, energyToUse);
+   
+  return false;
+}
+
+function spawnArmyElite(roomToSpawnFrom: Room): boolean {
+
+  if (!Game.flags["WAR"])
+    return false;
+  let controller = GetRoomObjects.getController(roomToSpawnFrom);
+  let armyAttacker = Nexus.getProbes("armyAttacker");
+  let armyHealer = Nexus.getProbes("armyHealer");
+  if (controller && controller.level < 4) {
+    return false;
+  }
+  if (armyAttacker.length > armyHealer.length * 2)
+    return false;
+  let probeSetupSoldier = new ProbeSetup({ ordered: true, prefix: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE], pattern: [ATTACK], suffix: [RANGED_ATTACK], sizeLimit: 8 }, "soldier-" + Game.time, { role: "armyAttacker", homeName: roomToSpawnFrom.name });
+  let energyToUse = 1240;//10 TOUGH - 9 ATTACK - 1 RANGED_ATTACK = 1240
+
+  Nexus.spawnCreep(probeSetupSoldier, roomToSpawnFrom, energyToUse);
+
+  return true;
+}
+
+function spawnArmyHealer(roomToSpawnFrom: Room): boolean {
+
+  if (!Game.flags["WAR"])
+    return false;
+  let probeSetupSoldier = new ProbeSetup({ ordered: true, prefix: [TOUGH, TOUGH], pattern: [HEAL, MOVE], suffix: [MOVE, MOVE], sizeLimit: 2 }, "soldier-" + Game.time, { role: "armyHealer", homeName: roomToSpawnFrom.name });
+  let energyToUse = 750;//2 TOUGH - 2 HEAL - 2 Move = 750
+
+  Nexus.spawnCreep(probeSetupSoldier, roomToSpawnFrom, energyToUse);
+
+  return true;
 }
 
 function spawnSoldierForConqueredRoom(roomToSpawnFrom: Room): boolean {
