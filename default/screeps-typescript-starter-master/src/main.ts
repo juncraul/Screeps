@@ -3,6 +3,8 @@ import * as Mothership from "Mothership";
 import { MemoryManager } from "MemoryManager";
 import { BaseBuilder } from "BaseBuilder/BaseBuilder";
 import { Profiler } from "Profiler";
+//import { Helper } from "Helper";
+//import { Helper } from "Helper";
 //import { PathLogic } from "PathLogic";
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
@@ -13,6 +15,34 @@ export const loop = ErrorMapper.wrapLoop(() => {
   //Memory.cpu = {}
   //Memory.cpu.history = []
   //Memory.paths = {}
+
+  
+  //let roomPos = new RoomPosition(10, 10, "E33N44");
+  //let room = new Room("E33N44")
+  //let controller = roomPos.findClosestByPath(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_CONTROLLER) });
+  //let cpuUsage;
+
+  //if (controller) {
+  //  console.log("Start a: ")
+  //  cpuUsage = Game.cpu.getUsed();
+  //  console.log(roomPos.findClosestByPath(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_CONTROLLER) }));
+  //  console.log(Game.cpu.getUsed() - cpuUsage)
+
+  //  console.log("Start b: ")
+  //  cpuUsage = Game.cpu.getUsed();
+  //  Helper.setCashedMemory("Controller-E33N44", controller.id)
+  //  console.log(Game.cpu.getUsed() - cpuUsage)
+
+  //  console.log("Start c: ")
+  //  cpuUsage = Game.cpu.getUsed();
+  //  console.log(Game.getObjectById(Helper.getCashedMemory("Controller-E33N44", null)))
+  //  console.log(Game.cpu.getUsed() - cpuUsage)
+
+  //  console.log("Start d: ")
+  //  cpuUsage = Game.cpu.getUsed();
+  //  console.log(room.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_CONTROLLER) }));
+  //  console.log(Game.cpu.getUsed() - cpuUsage)
+  //}
 
   Profiler.start("init");
   MemoryManager.initializeMemory();

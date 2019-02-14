@@ -1,5 +1,5 @@
 import { BaseLayout, Coord } from "./BaseLayout";
-import { layoutSieve, layoutRooftop, layoutReverseRooftop } from "./Layout";
+import { layoutSieve, layoutRooftop, layoutReverseRooftop, layoutUtility } from "./Layout";
 import { Helper } from "Helper";
 import { GetRoomObjects } from "GetRoomObjects";
 
@@ -59,7 +59,7 @@ export class BaseBuilder {
         default:
           continue;
       }
-      if (flag.color == COLOR_WHITE) {
+      if (flag.color == COLOR_WHITE && Game.time % 5 == 0) {//preview only once every 5th tick, might need rethinking
         this.buildBase(flag.pos, layoutToBeUsed, 4, true);
         this.createWall(Game.rooms[flag.pos.roomName], true);
       } else if (flag.color == COLOR_GREY && Game.time % 10 == 0) {//Construct only once every 10th tick
@@ -67,6 +67,28 @@ export class BaseBuilder {
         if (controller && controller.level >= 3) {//Build walls only if the controller is at least level 3 because that's when we can build Cannons.
           this.createWall(Game.rooms[flag.pos.roomName], false);
         }
+      }
+    }
+
+    for (var i = 10; i < 20; i++) {
+      var flag = Game.flags["ConstructionSite-" + i];
+      if (flag == null)
+        continue;
+      if (_.filter(Game.creeps, (creep) => creep.room == flag.room).length == 0)
+        continue;
+
+      let layoutToBeUsed: BaseLayout;
+      switch (flag.secondaryColor) {
+        case COLOR_WHITE:
+          layoutToBeUsed = layoutUtility;
+          break;
+        default:
+          continue;
+      }
+      if (flag.color == COLOR_WHITE && Game.time % 5 == 0) {//preview only once every 5th tick, might need rethinking
+        this.buildBase(flag.pos, layoutToBeUsed, 4, true);
+      } else if (flag.color == COLOR_GREY && Game.time % 10 == 0) {//Construct only once every 10th tick
+        this.buildBase(flag.pos, layoutToBeUsed, 4, false);
       }
     }
 
@@ -83,12 +105,28 @@ export class BaseBuilder {
     let extensionCoordinates = layout[controllerLevel]!.buildings["extension"].pos;
     let wallCoordinates = layout[controllerLevel]!.buildings["wall"].pos;
     let rampartCoordinates = layout[controllerLevel]!.buildings["rampart"].pos;
+    let observerCoordinates = layout[controllerLevel]!.buildings["observer"].pos;
+    let powerSpawnCoordinates = layout[controllerLevel]!.buildings["powerSpawn"].pos;
+    let linkCoordinates = layout[controllerLevel]!.buildings["link"].pos;
+    let terminalCoordinates = layout[controllerLevel]!.buildings["terminal"].pos;
+    let towerCoordinates = layout[controllerLevel]!.buildings["tower"].pos;
+    let nukerCoordinates = layout[controllerLevel]!.buildings["nuker"].pos;
+    let storageCoordinates = layout[controllerLevel]!.buildings["storage"].pos;
+    let labCoordinates = layout[controllerLevel]!.buildings["lab"].pos;
 
-    this.buildBuildingType(anchor, spawnCoordinates, "S", STRUCTURE_SPAWN, previewInsteadOfBuild, layout);
-    this.buildBuildingType(anchor, roadCoordinates, "R", STRUCTURE_ROAD, previewInsteadOfBuild, layout);
-    this.buildBuildingType(anchor, extensionCoordinates, "E", STRUCTURE_EXTENSION, previewInsteadOfBuild, layout);
-    this.buildBuildingType(anchor, wallCoordinates, "W", STRUCTURE_WALL, previewInsteadOfBuild, layout);
-    this.buildBuildingType(anchor, rampartCoordinates, "R", STRUCTURE_RAMPART, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, spawnCoordinates, "Sp", STRUCTURE_SPAWN, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, roadCoordinates, "Ro", STRUCTURE_ROAD, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, extensionCoordinates, "Ex", STRUCTURE_EXTENSION, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, wallCoordinates, "Wa", STRUCTURE_WALL, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, rampartCoordinates, "Ra", STRUCTURE_RAMPART, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, observerCoordinates, "Ob", STRUCTURE_OBSERVER, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, powerSpawnCoordinates, "Po", STRUCTURE_POWER_SPAWN, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, linkCoordinates, "Li", STRUCTURE_LINK, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, terminalCoordinates, "Te", STRUCTURE_TERMINAL, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, towerCoordinates, "To", STRUCTURE_TOWER, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, nukerCoordinates, "Nu", STRUCTURE_NUKER, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, storageCoordinates, "S", STRUCTURE_STORAGE, previewInsteadOfBuild, layout);
+    this.buildBuildingType(anchor, labCoordinates, "La", STRUCTURE_LAB, previewInsteadOfBuild, layout);
   }
 
   private static buildBuildingType(anchor: RoomPosition, buildingsCoordinates: Coord[], annotate: string, constructionType: BuildableStructureConstant, previewInsteadOfBuild: boolean, layout: BaseLayout) {

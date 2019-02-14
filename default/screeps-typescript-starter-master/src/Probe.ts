@@ -244,23 +244,17 @@ export class Probe {
     return result;
   }
 
-  goTo(destination: RoomPosition) {
-    if (this.creep.id == "5c61f13006153717958489b7") {
-      console.log(this.creep.memory.path)
-      console.log(this.pos.x + " " + this.pos.y)
-      console.log(destination.x + " " + destination.y)
+  goTo(destination: RoomPosition, strokeColor: string = "") {
+    if (strokeColor != "") {
+      return this.creep.moveTo(destination, { visualizePathStyle: { stroke: strokeColor } });
     }
-    return this.creep.moveTo(destination);
+    else {
+      return this.creep.moveTo(destination);
+    }
   };
 
   goToCashed(destination: RoomPosition) {
     let creepGotStuck = JSON.stringify(this.creep.memory.previousPosition) == JSON.stringify(this.creep.pos);
-    if (this.creep.id == "5c61f13006153717958489b7") {
-      console.log(this.creep.memory.path)
-      console.log(this.pos.x + " " + this.pos.y)
-      console.log(destination.x + " " + destination.y)
-      console.log("got stuck" + creepGotStuck)
-    }
     if (!this.creep.memory.path || creepGotStuck) {
       this.creep.memory.path = PathLogic.getPath(this.creep.pos, destination, creepGotStuck);
     }

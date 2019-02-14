@@ -139,10 +139,33 @@ export class GetRoomObjects {
   public static getController(probeOrRoom: Probe | Room): StructureController | null {
     let target: any;
     if (probeOrRoom instanceof Probe) {
-      target = probeOrRoom.pos.findClosestByPath(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_CONTROLLER) });
+      let targetId = Helper.getCashedMemory("Controller-" + probeOrRoom.room.name, null)
+      if (!targetId) {
+        target = probeOrRoom.room.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_CONTROLLER) })[0];
+        Helper.setCashedMemory("Controller-" + probeOrRoom.room.name, target.id)
+      } else {
+        target = Game.getObjectById(targetId);
+      }
     }
     else {
-      target = probeOrRoom.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_CONTROLLER) })[0];
+      let targetId = Helper.getCashedMemory("Controller-" + probeOrRoom.name, null)
+      if (!targetId) {
+        target = probeOrRoom.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_CONTROLLER) })[0];
+        Helper.setCashedMemory("Controller-" + probeOrRoom.name, target.id)
+      } else {
+        target = Game.getObjectById(targetId);
+      }
+    }
+    return target instanceof StructureController ? target : null;
+  }
+
+  public static getSpawn(probeOrRoom: Probe | Room): StructureController | null {
+    let target: any;
+    if (probeOrRoom instanceof Probe) {
+      target = probeOrRoom.room.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_SPAWN) })[0];
+    }
+    else {
+      target = probeOrRoom.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_SPAWN) })[0];
     }
     return target instanceof StructureController ? target : null;
   }
@@ -215,9 +238,11 @@ export class GetRoomObjects {
   }
 
   public static getClosestStructureToRepairByPath(pos: RoomPosition, damageProportionForNonWallRamp: number, includeRampartsWalls: boolean = false): Structure | null {
+    if (pos.roomName == "E31N46")
+      return null;
     let structure = pos.findClosestByPath(FIND_STRUCTURES, {
       filter: structure => (structure.hits < structure.hitsMax * damageProportionForNonWallRamp)
-        && ((includeRampartsWalls) || (!includeRampartsWalls && structure.structureType != STRUCTURE_WALL && structure.structureType != STRUCTURE_RAMPART))
+        && (structure.structureType != STRUCTURE_WALL && structure.structureType != STRUCTURE_RAMPART)
     });
     if (!structure && includeRampartsWalls) {
       for (let i = 0.00001; i < 1 && !structure; i *= 2) {
@@ -239,7 +264,7 @@ export class GetRoomObjects {
     if (!structure) {
       structure = pos.findClosestByRange(FIND_STRUCTURES, {
         filter: structure => (structure.hits < structure.hitsMax * damageProportionForNonWallRamp)
-          && ((includeRampartsWalls) || (!includeRampartsWalls && structure.structureType != STRUCTURE_WALL && structure.structureType != STRUCTURE_RAMPART))
+          && (structure.structureType != STRUCTURE_WALL && structure.structureType != STRUCTURE_RAMPART)
       });
     }
     if (!structure && includeRampartsWalls) {

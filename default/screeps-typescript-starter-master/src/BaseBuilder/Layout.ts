@@ -65,6 +65,14 @@ export const layoutSieve: BaseLayout = {
         pos: [
         ]
       },
+      "observer": { pos: [] },
+      "powerSpawn": { pos: [] },
+      "link": { pos: [] },
+      "terminal": { pos: [] },
+      "tower": { pos: [] },
+      "nuker": { pos: [] },
+      "storage": { pos: [] },
+      "lab": { pos: [] }
     }
   }
 }
@@ -217,6 +225,14 @@ export const layoutRooftop: BaseLayout = {
         pos: [
         ]
       },
+      "observer": { pos: [] },
+      "powerSpawn": { pos: [] },
+      "link": { pos: [] },
+      "terminal": { pos: [] },
+      "tower": { pos: [] },
+      "nuker": { pos: [] },
+      "storage": { pos: [] },
+      "lab": { pos: [] }
     }
   }
 }
@@ -370,6 +386,42 @@ export const layoutReverseRooftop: BaseLayout = {
         pos: [
         ]
       },
+      "observer": { pos: [] },
+      "powerSpawn": { pos: [] },
+      "link": { pos: [] },
+      "terminal": { pos: [] },
+      "tower": { pos: [] },
+      "nuker": { pos: [] },
+      "storage": { pos: [] },
+      "lab": { pos: [] }
     }
   }
+}
+
+export const layoutUtility: BaseLayout = {
+  data: {
+    anchor: {
+      x: 25,
+      y: 25
+    }
+  },
+  4:
+  {
+    controllerLevel: 4,
+    buildings: {
+      "spawn": { pos: [] },
+      "extension": { pos: [] },
+      "wall": { pos: [] },
+      "rampart": { pos: [] },
+      "road": { pos: [{ x: 23, y: 20 }, { x: 24, y: 20 }, { x: 25, y: 20 }, { x: 26, y: 20 }, { x: 27, y: 20 }, { x: 28, y: 20 }, { x: 23, y: 21 }, { x: 28, y: 21 }, { x: 23, y: 22 }, { x: 25, y: 22 }, { x: 26, y: 22 }, { x: 28, y: 22 }, { x: 23, y: 23 }, { x: 24, y: 23 }, { x: 27, y: 23 }, { x: 28, y: 23 }, { x: 23, y: 24 }, { x: 24, y: 24 }, { x: 27, y: 24 }, { x: 28, y: 24 }, { x: 23, y: 25 }, { x: 28, y: 25 }, { x: 23, y: 26 }, { x: 28, y: 26 }, { x: 23, y: 27 }, { x: 24, y: 27 }, { x: 25, y: 27 }, { x: 26, y: 27 }, { x: 27, y: 27 }, { x: 28, y: 27 }] },
+      "observer": { pos: [{ x: 24, y: 22 }] },
+      "powerSpawn": { pos: [{ x: 25, y: 21 }] },
+      "link": { pos: [{ x: 26, y: 21 }] },
+      "terminal": { pos: [{ x: 25, y: 23 }] },
+      "tower": { pos: [{ x: 27, y: 21 }, { x: 24, y: 21 }] },
+      "nuker": { pos: [{ x: 27, y: 22 }] },
+      "storage": { pos: [{ x: 26, y: 23 }] },
+      "lab": { pos: [{ x: 25, y: 24 }, { x: 26, y: 24 }, { x: 24, y: 25 }, { x: 25, y: 25 }, { x: 26, y: 25 }, { x: 27, y: 25 }, { x: 24, y: 26 }, { x: 25, y: 26 }, { x: 26, y: 26 }, { x: 27, y: 26 }] }
+    }
+}
 }

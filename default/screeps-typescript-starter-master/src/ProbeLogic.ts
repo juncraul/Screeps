@@ -2,10 +2,12 @@ import { Probe } from "Probe";
 import { Tasks } from "Tasks";
 import { GetRoomObjects } from "GetRoomObjects";
 import { MY_SIGNATURE } from "Constants";
+import { Profiler } from "Profiler";
 
 export class ProbeLogic {
 
   public static harvesterLogic(probe: Probe): void {
+    Profiler.start("harvesterLogic");
     if (_.sum(probe.carry) === probe.carryCapacity && probe.carryCapacity != 0) {
       let deposit = GetRoomObjects.getClosestEmptyDeposit(probe);
       if (deposit) {
@@ -24,9 +26,11 @@ export class ProbeLogic {
         }
       }
     }
+    Profiler.end("harvesterLogic");
   }
 
   public static upgraderLogic(probe: Probe): void {
+    Profiler.start("upgraderLogic");
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -70,9 +74,11 @@ export class ProbeLogic {
         }
       }
     }
+    Profiler.end("upgraderLogic");
   }
 
   public static builderLogic(probe: Probe): void {
+    Profiler.start("builderLogic");
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -97,6 +103,12 @@ export class ProbeLogic {
         let target = GetRoomObjects.getClosestConstructionSite(probe);
         if (target) {
           probe.build(target);
+        }
+        else {
+          let targetRepair = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 0.9);
+          if (targetRepair) {
+            probe.repair(targetRepair);
+          }
         }
       }
     }
@@ -129,9 +141,11 @@ export class ProbeLogic {
         }
       }
     }
+    Profiler.end("builderLogic");
   }
 
   public static carrierLogic(probe: Probe): void {
+    Profiler.start("carrierLogic");
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -188,9 +202,11 @@ export class ProbeLogic {
         }
       }
     }
+    Profiler.end("carrierLogic");
   }
 
   public static repairerLogic(probe: Probe): void {
+    Profiler.start("repairerLogic");
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -242,9 +258,11 @@ export class ProbeLogic {
         }
       }
     }
+    Profiler.end("repairerLogic");
   }
 
   public static longDistanceHarvesterLogic(probe: Probe): void {
+    Profiler.start("longDistanceHarvesterLogic");
     if (probe.room.name != probe.memory.remote) {
       ProbeLogic.goToRemoteRoom(probe, probe.memory.remote);
     }
@@ -307,9 +325,11 @@ export class ProbeLogic {
         }
       }
     }
+    Profiler.end("longDistanceHarvesterLogic");
   }
 
   public static longDistanceCarrierLogic(probe: Probe): void {
+    Profiler.start("longDistanceCarrierLogic");
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -328,7 +348,7 @@ export class ProbeLogic {
           probe.pickup(droppedResource);
         }
         else {
-          let deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, false, false, probe.carryCapacity - _.sum(probe.carry));
+          let deposit = GetRoomObjects.getClosestFilledDeposit(probe, false, false, false, probe.carryCapacity - _.sum(probe.carry));
           if (deposit) {
             probe.withdraw(deposit, RESOURCE_ENERGY);
           }
@@ -352,9 +372,11 @@ export class ProbeLogic {
         }
       }
     }
+    Profiler.end("longDistanceCarrierLogic");
   }
 
   public static longDistanceBuilderLogic(probe: Probe): void {
+    Profiler.start("longDistanceBuilderLogic");
     if (probe.room.name != probe.memory.remote) {
       ProbeLogic.goToRemoteRoom(probe, probe.memory.remote);
     }
@@ -392,12 +414,12 @@ export class ProbeLogic {
               probe.build(target);
             }
             else {
-              let target = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 0.7);
+              let target = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 0.6);
               if (target) {
                 probe.repair(target);
               }
               else {
-                let target = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 1.0);
+                let target = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 0.8, true);
                 if (target) {
                   probe.repair(target);
                 }
@@ -431,9 +453,11 @@ export class ProbeLogic {
         }
       }
     }
+    Profiler.end("longDistanceBuilderLogic");
   }
 
   public static claimerLogic(probe: Probe): void {
+    Profiler.start("claimerLogic");
     if (probe.room.name != probe.memory.remote) {
       ProbeLogic.goToRemoteRoom(probe, probe.memory.remote);
     }
@@ -450,9 +474,11 @@ export class ProbeLogic {
         }
       }
     }
+    Profiler.end("claimerLogic");
   }
 
   public static soldierLogic(probe: Probe): void {
+    Profiler.start("soldierLogic");
     if (probe.room.name != probe.memory.remote) {
       ProbeLogic.goToRemoteRoom(probe, probe.memory.remote);
     }
@@ -462,9 +488,11 @@ export class ProbeLogic {
         probe.attack(enemy);
       }
     }
+    Profiler.end("soldierLogic");
   }
 
   public static armyAttackerLogic(probe: Probe): void {
+    Profiler.start("armyAttackerLogic");
     var flagToAttachFrom = Game.flags["WAR"];
     if (!flagToAttachFrom) {
       flagToAttachFrom = Game.flags["WAR Over"];//This flag is used just here, it is not used for reproduction
@@ -477,7 +505,6 @@ export class ProbeLogic {
     }
 
     var roomToAttack = flagToAttachFrom.pos;
-
     if (roomToAttack != null) {
       if (probe.room.name != roomToAttack.roomName) {
         probe.creep.moveTo(roomToAttack);
@@ -488,19 +515,19 @@ export class ProbeLogic {
         const targetStructuresFromFlag = flagToAttachFrom.pos.findInRange(FIND_HOSTILE_STRUCTURES, 1);
         const targetCreeps = targetCreepsFromFlag.length == 0 ? probe.pos.findClosestByPath(FIND_HOSTILE_CREEPS) : targetCreepsFromFlag[0];
         const targetStructures = targetStructuresFromFlag.length == 0 ? probe.pos.findClosestByPath(FIND_HOSTILE_STRUCTURES) : targetStructuresFromFlag[0];
-        if (targetStructures) {
-          if (probe.attack(targetStructures) == ERR_NOT_IN_RANGE) {//This quite not work, have to analyze it, probes still targeted other creeps
-            probe.creep.moveTo(targetStructures, { visualizePathStyle: { stroke: '#ff0000' } });
-          }
-          if (probe.creep.rangedAttack(targetStructures) == ERR_NOT_IN_RANGE) {
-            probe.creep.moveTo(targetStructures, { visualizePathStyle: { stroke: '#ff0000' } });
-          }
-        } else if (targetCreeps && targetCreeps.pos.x != 0 && targetCreeps.pos.y != 0 && targetCreeps.pos.x != 49 && targetCreeps.pos.y != 49) {
+        if (targetCreeps && targetCreeps.pos.x != 0 && targetCreeps.pos.y != 0 && targetCreeps.pos.x != 49 && targetCreeps.pos.y != 49) {
           if (probe.attack(targetCreeps) == ERR_NOT_IN_RANGE) {
             probe.creep.moveTo(targetCreeps, { visualizePathStyle: { stroke: '#ff0000' } });
           }
           if (probe.creep.rangedAttack(targetCreeps) == ERR_NOT_IN_RANGE) {
             probe.creep.moveTo(targetCreeps, { visualizePathStyle: { stroke: '#ff0000' } });
+          }
+        } else if (targetStructures) {
+          if (probe.attack(targetStructures) == ERR_NOT_IN_RANGE) {//This quite not work, have to analyze it, probes still targeted other creeps
+            probe.creep.moveTo(targetStructures, { visualizePathStyle: { stroke: '#ff0000' } });
+          }
+          if (probe.creep.rangedAttack(targetStructures) == ERR_NOT_IN_RANGE) {
+            probe.creep.moveTo(targetStructures, { visualizePathStyle: { stroke: '#ff0000' } });
           }
         }
         else {
@@ -508,9 +535,13 @@ export class ProbeLogic {
         }
       }
     }
+    Profiler.end("armyAttackerLogic");
   }
 
   public static armyHealerLogic(probe: Probe): void {
+    Profiler.start("armyHealerLogic");
+    //if (probe.pos.y < 35 && probe.pos.roomName == "E32N46")
+    //  return;
     var flagToAttachFrom = Game.flags["WAR"];
     if (!flagToAttachFrom) {
       flagToAttachFrom = Game.flags["WAR Over"];//This flag is used just here, it is not used for reproduction
@@ -530,8 +561,8 @@ export class ProbeLogic {
 
         if (wondedCreep && wondedCreep.pos.x != 0 && wondedCreep.pos.y != 0 && wondedCreep.pos.x != 49 && wondedCreep.pos.y != 49) {
           if (probe.creep.heal(wondedCreep) == ERR_NOT_IN_RANGE) {
-            if (wondedCreep)
-              probe.creep.moveTo(wondedCreep, { visualizePathStyle: { stroke: '#00ff00' } });
+            probe.creep.rangedHeal(wondedCreep)
+            probe.creep.moveTo(wondedCreep, { visualizePathStyle: { stroke: '#00ff00' } });
           }
         }
         else {
@@ -539,6 +570,21 @@ export class ProbeLogic {
         }
       }
     }
+    Profiler.end("armyHealerLogic");
+  }
+
+  public static decoyLogic(probe: Probe): void {
+    Profiler.start("decoy");
+    var flagDecoy = Game.flags["Decoy"];
+    if (!flagDecoy)
+      return;
+    if (probe.room.name != flagDecoy.pos.roomName) {
+      ProbeLogic.goToRemoteRoom(probe, flagDecoy.pos.roomName);
+    }
+    else {
+        probe.goToCashed(flagDecoy.pos);
+    }
+    Profiler.end("decoy");
   }
 
   private static goToRemoteRoom(probe: Probe, roomName: string) {
@@ -547,12 +593,12 @@ export class ProbeLogic {
       probe.goToDifferentRoom(roomName);
     } else {
       let foundCurrentRoom = false;
-      for (let currenRoom in path) {
+      for (let currenRoomIndex in path) {
         if (foundCurrentRoom) {
-          probe.goToDifferentRoom(currenRoom);
+          probe.goToDifferentRoom(path[currenRoomIndex]);
           break;
         }
-        if (currenRoom == probe.room.name) {
+        if (path[currenRoomIndex] == probe.room.name) {
           foundCurrentRoom = true;
         }
       }
