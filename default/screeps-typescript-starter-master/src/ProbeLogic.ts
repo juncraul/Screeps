@@ -2,12 +2,12 @@ import { Probe } from "Probe";
 import { Tasks } from "Tasks";
 import { GetRoomObjects } from "GetRoomObjects";
 import { MY_SIGNATURE } from "Constants";
-import { Profiler } from "Profiler";
+import { profile } from "./Profiler";
 
+@profile
 export class ProbeLogic {
 
   public static harvesterLogic(probe: Probe): void {
-    Profiler.start("harvesterLogic");
     if (_.sum(probe.carry) === probe.carryCapacity && probe.carryCapacity != 0) {
       let deposit = GetRoomObjects.getClosestEmptyDeposit(probe);
       if (deposit) {
@@ -26,11 +26,9 @@ export class ProbeLogic {
         }
       }
     }
-    Profiler.end("harvesterLogic");
   }
 
   public static upgraderLogic(probe: Probe): void {
-    Profiler.start("upgraderLogic");
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -74,11 +72,9 @@ export class ProbeLogic {
         }
       }
     }
-    Profiler.end("upgraderLogic");
   }
 
   public static builderLogic(probe: Probe): void {
-    Profiler.start("builderLogic");
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -141,11 +137,9 @@ export class ProbeLogic {
         }
       }
     }
-    Profiler.end("builderLogic");
   }
 
   public static carrierLogic(probe: Probe): void {
-    Profiler.start("carrierLogic");
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -202,11 +196,9 @@ export class ProbeLogic {
         }
       }
     }
-    Profiler.end("carrierLogic");
   }
 
   public static repairerLogic(probe: Probe): void {
-    Profiler.start("repairerLogic");
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -263,11 +255,9 @@ export class ProbeLogic {
         }
       }
     }
-    Profiler.end("repairerLogic");
   }
 
   public static longDistanceHarvesterLogic(probe: Probe): void {
-    Profiler.start("longDistanceHarvesterLogic");
     if (probe.room.name != probe.memory.remote) {
       ProbeLogic.goToRemoteRoom(probe, probe.memory.remote);
     }
@@ -330,11 +320,9 @@ export class ProbeLogic {
         }
       }
     }
-    Profiler.end("longDistanceHarvesterLogic");
   }
 
   public static longDistanceCarrierLogic(probe: Probe): void {
-    Profiler.start("longDistanceCarrierLogic");
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -377,11 +365,9 @@ export class ProbeLogic {
         }
       }
     }
-    Profiler.end("longDistanceCarrierLogic");
   }
 
   public static longDistanceBuilderLogic(probe: Probe): void {
-    Profiler.start("longDistanceBuilderLogic");
     if (probe.room.name != probe.memory.remote) {
       ProbeLogic.goToRemoteRoom(probe, probe.memory.remote);
     }
@@ -458,11 +444,9 @@ export class ProbeLogic {
         }
       }
     }
-    Profiler.end("longDistanceBuilderLogic");
   }
 
   public static claimerLogic(probe: Probe): void {
-    Profiler.start("claimerLogic");
     if (probe.room.name != probe.memory.remote) {
       ProbeLogic.goToRemoteRoom(probe, probe.memory.remote);
     }
@@ -479,11 +463,9 @@ export class ProbeLogic {
         }
       }
     }
-    Profiler.end("claimerLogic");
   }
 
   public static soldierLogic(probe: Probe): void {
-    Profiler.start("soldierLogic");
     if (probe.room.name != probe.memory.remote) {
       ProbeLogic.goToRemoteRoom(probe, probe.memory.remote);
     }
@@ -493,11 +475,9 @@ export class ProbeLogic {
         probe.attack(enemy);
       }
     }
-    Profiler.end("soldierLogic");
   }
 
   public static armyAttackerLogic(probe: Probe): void {
-    Profiler.start("armyAttackerLogic");
     var flagToAttachFrom = Game.flags["WAR"];
     if (!flagToAttachFrom) {
       flagToAttachFrom = Game.flags["WAR Over"];//This flag is used just here, it is not used for reproduction
@@ -540,11 +520,9 @@ export class ProbeLogic {
         }
       }
     }
-    Profiler.end("armyAttackerLogic");
   }
 
   public static armyHealerLogic(probe: Probe): void {
-    Profiler.start("armyHealerLogic");
     //if (probe.pos.y < 35 && probe.pos.roomName == "E32N46")
     //  return;
     var flagToAttachFrom = Game.flags["WAR"];
@@ -575,11 +553,9 @@ export class ProbeLogic {
         }
       }
     }
-    Profiler.end("armyHealerLogic");
   }
 
   public static decoyLogic(probe: Probe): void {
-    Profiler.start("decoy");
     var flagDecoy = Game.flags["Decoy"];
     if (!flagDecoy)
       return;
@@ -589,7 +565,6 @@ export class ProbeLogic {
     else {
         probe.goToCashed(flagDecoy.pos);
     }
-    Profiler.end("decoy");
   }
 
   private static goToRemoteRoom(probe: Probe, roomName: string) {

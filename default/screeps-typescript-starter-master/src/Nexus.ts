@@ -1,6 +1,7 @@
 import { ProbeSetup } from 'ProbeSetup';
 import { Probe } from 'Probe';
 import { Cannon } from 'Cannon';
+import { profile } from "./Profiler";
 
 export interface SpawnRequest {
   setup: ProbeSetup;					// creep body generator to use
@@ -8,6 +9,7 @@ export interface SpawnRequest {
 }
 
 
+@profile
 export class Nexus {
 
   public static spawnCreep(probeSetup: ProbeSetup, spawnToUse: StructureSpawn | Room, energy: number): number {

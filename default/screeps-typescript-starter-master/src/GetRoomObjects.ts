@@ -2,7 +2,9 @@ import { Probe } from "Probe";
 import { Cannon } from "Cannon";
 import { Helper } from "Helper";
 import { MemoryManager } from "MemoryManager";
+import { profile } from "./Profiler";
 
+@profile
 export class GetRoomObjects {
   public static getClosestActiveSourceDivided(probe: Probe, includeMineralDeposit: boolean = false): Mineral | Source | null {
     let sources: (Mineral | Source)[]

@@ -36,5 +36,11 @@ interface RoomMemory {
 declare namespace NodeJS {
   interface Global {
     log: any;
+    Profiler: Profiler;
+    MemoryManager: IMemoryManager
   }
+
+}
+interface IMemoryManager {
+  
 }

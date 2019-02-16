@@ -1,4 +1,6 @@
+import { profile } from "./Profiler";
 
+@profile
 export class Helper {
 
   public static getCashedMemory(key: string, defaultValue : any): any {

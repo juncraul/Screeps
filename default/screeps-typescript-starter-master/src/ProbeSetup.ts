@@ -1,3 +1,5 @@
+import { profile } from "./Profiler";
+
 export interface bodySetup {
   pattern: BodyPartConstant[];			// body pattern to be repeated
   sizeLimit: number;						// maximum number of unit repetitions to make body
@@ -12,6 +14,8 @@ export function bodyCost(bodyparts: BodyPartConstant[]): number {
   return _.sum(_.map(bodyparts, part => BODYPART_COST[part]));
 }
 
+
+@profile
 export class ProbeSetup {
   bodySetup: bodySetup;
   name: string;

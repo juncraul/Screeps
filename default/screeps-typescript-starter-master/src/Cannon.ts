@@ -1,3 +1,6 @@
+import { profile } from "./Profiler";
+
+@profile
 export class Cannon {
   energy: number;
   energyCapacity: number;

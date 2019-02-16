@@ -1,4 +1,6 @@
+import { profile } from "./Profiler";
 
+@profile
 export class Stargate {
   link: StructureLink;
   cooldown: number;

@@ -1,4 +1,6 @@
+import { profile } from "./Profiler";
 
+@profile
 export class PathLogic {
   public static generateNewPath(roomPositionStart: RoomPosition, roomPositionFinish: RoomPosition, ignoreCreeps: boolean): string {
     let pathPoints;

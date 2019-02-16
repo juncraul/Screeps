@@ -1,5 +1,6 @@
 import { Tasks } from "Tasks";
 import { Helper } from "Helper";
+import { profile } from "./Profiler";
 
 export const enum CreepRoles {
   ROLE_UNASSIGNED = 0,
@@ -18,19 +19,20 @@ export const enum CreepRoles {
   ROLE_UPGRADETRANSPORT
 }
 
-export class MemoryManager {
+@profile
+export class MemoryManager implements IMemoryManager {
   private static rooms: { [name: string]: RoomMemory };
-  
-  public static initializeMemory() {
+
+  constructor (){
     if (Memory.Keys == undefined) {
       Memory.Keys = new Object();
     }
-    MemoryManager.initializeSource();
-    MemoryManager.initializeContainers();
+    this.initializeSource();
+    this.initializeContainers();
     if (Game.time % 5 == 0) {
-      MemoryManager.saveRoomsToMemory();
+      this.saveRoomsToMemory();
     }
-    MemoryManager.loadRoomsFromMemory();
+    this.loadRoomsFromMemory();
   }
 
   public static getRoomMemory(room: Room | string): RoomMemory {
@@ -41,7 +43,7 @@ export class MemoryManager {
     }
   }
 
-  private static initializeSource() {
+  initializeSource() {
     let rooms = Tasks.getmyRoomsWithController();
     let roomsToHarvest = Tasks.getRoomsToHarvest();
 
@@ -67,7 +69,7 @@ export class MemoryManager {
     })
   }
 
-  private static initializeContainers() {
+  initializeContainers() {
     let rooms = Tasks.getmyRoomsWithController();
     let roomsToHarvest = Tasks.getRoomsToHarvest();
 
@@ -93,7 +95,7 @@ export class MemoryManager {
     })
   }
 
-  private static saveRoomsToMemory() {
+  saveRoomsToMemory() {
     let rooms = Tasks.getRoomsToHarvest();
     for (let roomIndex in rooms) {
       let room = Game.rooms[rooms[roomIndex]];
@@ -110,7 +112,7 @@ export class MemoryManager {
     }
   }
 
-  private static loadRoomsFromMemory() {
+  loadRoomsFromMemory() {
     MemoryManager.rooms = {}
     let rooms = Tasks.getRoomsToHarvest();
     for (let roomIndex in rooms) {

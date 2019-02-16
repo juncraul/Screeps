@@ -1,6 +1,7 @@
 import { Tasks } from "Tasks";
+import { profile } from "./Profiler";
 
-
+@profile
 export class TradeHub {
   cooldown: number;
   hits: number;

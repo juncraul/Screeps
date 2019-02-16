@@ -1,5 +1,7 @@
 import { PathLogic } from "PathLogic";
+import { profile } from "./Profiler";
 
+@profile
 export class Probe {
   creep: Creep; 						// The creep that this wrapper class will control
   body: BodyPartDefinition[];    	 	// These properties are all wrapped from this.creep.* to this.*

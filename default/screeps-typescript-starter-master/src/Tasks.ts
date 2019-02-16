@@ -1,5 +1,7 @@
 import { OrderSchedule } from "utils/OrderSchedule";
+import { profile } from "./Profiler";
 
+@profile
 export class Tasks {
   public static getRoomsToHarvest(): string[] {
     switch (Game.shard.name) {
