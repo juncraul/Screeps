@@ -286,11 +286,6 @@ function spawnCarrier(roomToSpawnFrom: Room): boolean {
   let levelBlueprintToBuild: number;
   let deposit = roomToSpawnFrom.find(FIND_STRUCTURES, {filter: structure =>structure.structureType == STRUCTURE_CONTAINER});
 
-  if (deposit.length == 0) { //Don't build any carrier if we don't have a container anyway
-    return false;
-  }
-
-
   if (!controller) {
     return false;
   }
@@ -303,6 +298,9 @@ function spawnCarrier(roomToSpawnFrom: Room): boolean {
     case 1://300 Energy avilable
       energyToUse = 100;//1 Carry; 1 Move
       probeSetupCarrier = probeSetupCarrierOne;
+      if (deposit.length == 0) { //Don't build any carrier if we don't have a container anyway
+        return false;            //For future levels we drop resource on the ground, so will always need carries
+      }
       break;
     case 2://550 Energy available
       energyToUse = 200;//2 Carry; 2 Move

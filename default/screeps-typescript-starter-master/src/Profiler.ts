@@ -13,7 +13,7 @@ interface ProfilerData {
 
 export class Profiler {
 
-  public static start(identifier: string, consoleReport = false, period = 5) {
+  public static start(identifier: string, consoleReport = false, period = 10) {
     let profile = this.initProfile(identifier, consoleReport, period);
     profile.cpu = Game.cpu.getUsed();
   }
@@ -24,7 +24,7 @@ export class Profiler {
     profile.count++;
   }
 
-  public static resultOnly(identifier: string, result: number, consoleReport = false, period = 5) {
+  public static resultOnly(identifier: string, result: number, consoleReport = false, period = 10) {
     let profile = this.initProfile(identifier, consoleReport, period);
     profile.total += result;
     profile.count++;

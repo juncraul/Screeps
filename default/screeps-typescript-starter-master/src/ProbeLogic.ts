@@ -228,9 +228,14 @@ export class ProbeLogic {
         }
       }
       else {
-        let target = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 0.9);
+        let target = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 0.8);
         if (target) {
           probe.repair(target);
+        } else {
+          target = GetRoomObjects.getClosestStructureToRepairByPath(probe.pos, 0.9, true);
+          if (target) {
+            probe.repair(target);
+          }
         }
       }
     }

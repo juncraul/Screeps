@@ -92,6 +92,14 @@ export class BaseBuilder {
       }
     }
 
+    //TODO: Add this as a flag function
+    //for (let i = 0; i < 50; i++)
+    //  for (let j = 0; j < 50; j++) {
+    //    let structure = Game.rooms["E31N46"].lookForAt(LOOK_STRUCTURES, i, j)[0]
+    //    if (structure)
+    //      structure.destroy();
+    //  }
+
     flag = Game.flags["CreateSpawn"];
     if (flag && flag.room) {
       flag.room.createConstructionSite(flag.pos.x, flag.pos.y, STRUCTURE_SPAWN, "Raul-" + flag.room.name + "-X");

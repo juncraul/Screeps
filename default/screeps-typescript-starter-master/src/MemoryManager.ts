@@ -19,12 +19,26 @@ export const enum CreepRoles {
 }
 
 export class MemoryManager {
+  private static rooms: { [name: string]: RoomMemory };
+  
   public static initializeMemory() {
     if (Memory.Keys == undefined) {
       Memory.Keys = new Object();
     }
     MemoryManager.initializeSource();
     MemoryManager.initializeContainers();
+    if (Game.time % 5 == 0) {
+      MemoryManager.saveRoomsToMemory();
+    }
+    MemoryManager.loadRoomsFromMemory();
+  }
+
+  public static getRoomMemory(room: Room | string): RoomMemory {
+    if (room instanceof Room) {
+      return MemoryManager.rooms[room.name];
+    } else {
+      return MemoryManager.rooms[room];
+    }
   }
 
   private static initializeSource() {
@@ -77,5 +91,30 @@ export class MemoryManager {
         }
       })
     })
+  }
+
+  private static saveRoomsToMemory() {
+    let rooms = Tasks.getRoomsToHarvest();
+    for (let roomIndex in rooms) {
+      let room = Game.rooms[rooms[roomIndex]];
+      if (room) {
+        let controllerFromRoom = room.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_CONTROLLER) })[0];
+        let controllerContainerFromRoom = controllerFromRoom.pos.findInRange(FIND_STRUCTURES, 3, { filter: structure => (structure.structureType == STRUCTURE_CONTAINER) })[0];
+        let roomMem: RoomMemory = {
+          controller: controllerFromRoom.id,
+          controllerContainer: controllerContainerFromRoom ? controllerContainerFromRoom.id : undefined,
+          sources: room.find(FIND_SOURCES).map(source => source.id)
+        }
+        Memory.rooms[rooms[roomIndex]] = roomMem;
+      }
+    }
+  }
+
+  private static loadRoomsFromMemory() {
+    MemoryManager.rooms = {}
+    let rooms = Tasks.getRoomsToHarvest();
+    for (let roomIndex in rooms) {
+      MemoryManager.rooms[rooms[roomIndex]] = Memory.rooms[rooms[roomIndex]];
+    }
   }
 }

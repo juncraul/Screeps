@@ -15,6 +15,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
   //Memory.cpu = {}
   //Memory.cpu.history = []
   //Memory.paths = {}
+  //Memory.rooms = {}
 
   
   //let roomPos = new RoomPosition(10, 10, "E33N44");
@@ -43,7 +44,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
   //  console.log(room.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_CONTROLLER) }));
   //  console.log(Game.cpu.getUsed() - cpuUsage)
   //}
-
+  
   Profiler.start("init");
   MemoryManager.initializeMemory();
   Profiler.end("init");

@@ -1,11 +1,12 @@
 import { Probe } from "Probe";
 import { Cannon } from "Cannon";
 import { Helper } from "Helper";
+import { MemoryManager } from "MemoryManager";
 
 export class GetRoomObjects {
   public static getClosestActiveSourceDivided(probe: Probe, includeMineralDeposit: boolean = false): Mineral | Source | null {
     let sources: (Mineral | Source)[]
-    sources = probe.room.find(FIND_SOURCES_ACTIVE);
+    sources = GetRoomObjects.getAvailableSources(probe.room);
     if (includeMineralDeposit) {
       let mineral = GetRoomObjects.getAvailableMineral(probe.room);
       if (mineral) {
@@ -78,6 +79,20 @@ export class GetRoomObjects {
     }
   }
 
+  public static getAvailableSources(room: Room): Source[] {
+    let roomMemory = MemoryManager.getRoomMemory(room.name);
+    let sources: Source[] = [];
+    if (!roomMemory)
+      return [];
+    for (let sourceIndex in roomMemory.sources) {
+      let source = Game.getObjectById(roomMemory.sources[sourceIndex]);
+      if (source instanceof Source && source.energy > 0) {
+        sources.push(source)
+      }
+    }
+    return sources;
+  }
+
   public static getAvailableMineral(room: Room): Mineral | null {
     let mineralExtractor = room.find(FIND_STRUCTURES, { filter: (structure) => { return (structure.structureType === STRUCTURE_EXTRACTOR) } })[0];
     let mineral = room.find(FIND_MINERALS, { filter: mineral => mineral.mineralAmount > 0 })[0];
@@ -137,24 +152,18 @@ export class GetRoomObjects {
 
 
   public static getController(probeOrRoom: Probe | Room): StructureController | null {
+    let roomName: string;
+    let roomMemory: RoomMemory;
     let target: any;
     if (probeOrRoom instanceof Probe) {
-      let targetId = Helper.getCashedMemory("Controller-" + probeOrRoom.room.name, null)
-      if (!targetId) {
-        target = probeOrRoom.room.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_CONTROLLER) })[0];
-        Helper.setCashedMemory("Controller-" + probeOrRoom.room.name, target.id)
-      } else {
-        target = Game.getObjectById(targetId);
-      }
+      roomName = probeOrRoom.room.name;
     }
     else {
-      let targetId = Helper.getCashedMemory("Controller-" + probeOrRoom.name, null)
-      if (!targetId) {
-        target = probeOrRoom.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_CONTROLLER) })[0];
-        Helper.setCashedMemory("Controller-" + probeOrRoom.name, target.id)
-      } else {
-        target = Game.getObjectById(targetId);
-      }
+      roomName = probeOrRoom.name;
+    }
+    roomMemory = MemoryManager.getRoomMemory(roomName);
+    if (roomMemory) {
+      target = Game.getObjectById(roomMemory.controller);
     }
     return target instanceof StructureController ? target : null;
   }

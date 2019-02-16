@@ -26,6 +26,12 @@ interface Memory {
   paths: Path[];
 }
 
+interface RoomMemory {
+  controller: string;
+  sources: string[]
+  controllerContainer: string | undefined;
+}
+
 // `global` extension samples
 declare namespace NodeJS {
   interface Global {
