@@ -19,5 +19,5 @@ interface Profiler {
   start(): void;
   status(): void;
   stop(): void;
-  toString(): void;
+  help(): void;
 }

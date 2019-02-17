@@ -1,6 +1,7 @@
 import { Tasks } from "Tasks";
 import { Helper } from "Helper";
 import { profile } from "./Profiler";
+import { GetRoomObjects } from "GetRoomObjects";
 
 export const enum CreepRoles {
   ROLE_UNASSIGNED = 0,
@@ -28,7 +29,7 @@ export class MemoryManager implements IMemoryManager {
       Memory.Keys = new Object();
     }
     this.initializeSource();
-    this.initializeContainers();
+    //this.initializeContainers();
     if (Game.time % 5 == 0) {
       this.saveRoomsToMemory();
     }
@@ -54,13 +55,17 @@ export class MemoryManager implements IMemoryManager {
       }
     });
 
-    let sources: Source[];
+    let sources: (Source | Mineral)[];
     sources = [];
     rooms.forEach(function (room) {
       let sourcesFromRoom = room.find(FIND_SOURCES);
+      let mineralFromRoom = GetRoomObjects.getAvailableMineral(room);
       sourcesFromRoom.forEach(function (source) {
         sources.push(source);
       })
+      if (mineralFromRoom) {
+        sources.push(mineralFromRoom);
+      }
     })
 
     sources.forEach(function (source) {

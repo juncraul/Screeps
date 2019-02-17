@@ -93,7 +93,7 @@ export class Probe {
     this.memory.targetId = source.id;
     return result;
   }
-
+  
   transfer(target: Creep | Probe | Structure, resourceType: ResourceConstant, amount?: number) {
     let result: ScreepsReturnCode;
     if (target instanceof Probe) {
@@ -232,6 +232,45 @@ export class Probe {
     this.memory.targetId = creep.id;
     return result;
   }
+  
+  rangedAttack(creep: Creep | Structure) {
+    let result = this.creep.rangedAttack(creep);
+    if (result == ERR_NOT_IN_RANGE) {
+      if (this.memory.useCashedPath) {
+        this.goToCashed(creep.pos)
+      } else {
+        this.goTo(creep.pos);
+      }
+    }
+    this.memory.targetId = creep.id;
+    return result;
+  }
+
+  heal(creep: Creep) {
+    let result = this.creep.heal(creep);
+    if (result == ERR_NOT_IN_RANGE) {
+      if (this.memory.useCashedPath) {
+        this.goToCashed(creep.pos)
+      } else {
+        this.goTo(creep.pos);
+      }
+    }
+    this.memory.targetId = creep.id;
+    return result;
+  }
+
+  rangedHeal(creep: Creep) {
+    let result = this.creep.rangedHeal(creep);
+    if (result == ERR_NOT_IN_RANGE) {
+      if (this.memory.useCashedPath) {
+        this.goToCashed(creep.pos)
+      } else {
+        this.goTo(creep.pos);
+      }
+    }
+    this.memory.targetId = creep.id;
+    return result;
+  }
 
   sign(controller: StructureController, text: string) {
     let result = this.creep.signController(controller, text);
@@ -248,7 +287,7 @@ export class Probe {
 
   goTo(destination: RoomPosition, strokeColor: string = "") {
     if (strokeColor != "") {
-      return this.creep.moveTo(destination, { visualizePathStyle: { stroke: strokeColor } });
+      return this.creep.moveTo(destination, { reusePath: 10, visualizePathStyle: { stroke: strokeColor } });
     }
     else {
       return this.creep.moveTo(destination);

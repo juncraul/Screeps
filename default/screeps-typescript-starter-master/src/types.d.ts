@@ -24,6 +24,7 @@ interface Memory {
   uuid: number;
   log: any;
   paths: Path[];
+  market: string[];
 }
 
 interface RoomMemory {

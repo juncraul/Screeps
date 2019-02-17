@@ -1,6 +1,7 @@
 /* tslint:disable:ban-types */
 
 import { PROFILER_ENABLED } from '../Constants';
+import { Mothership } from 'Mothership';
 
 export function init(): Profiler {
   const defaults = {
@@ -43,7 +44,7 @@ export function init(): Profiler {
       return "Profiler stopped";
     },
 
-    toString() {
+    help() {
       return "Profiler.start() - Starts the profiler\n" +
         "Profiler.stop() - Stops/Pauses the profiler\n" +
         "Profiler.status() - Returns whether is profiler is currently running or not\n" +
@@ -51,7 +52,7 @@ export function init(): Profiler {
         this.status();
     },
   };
-
+  wrapFunction(Mothership.work, 'Mothership.work');
   return cli;
 }
 
@@ -136,6 +137,7 @@ interface OutputData {
   cpuPerCall: number;
   callsPerTick: number;
   cpuPerTick: number;
+  totalCpu: number;
 }
 
 function outputProfilerData() {
@@ -159,6 +161,7 @@ function outputProfilerData() {
     result.cpuPerCall = time / calls;
     result.callsPerTick = calls / totalTicks;
     result.cpuPerTick = time / totalTicks;
+    result.totalCpu = time;
     totalCpu += result.cpuPerTick;
     return result as OutputData;
   });
@@ -178,6 +181,7 @@ function outputProfilerData() {
   output += _.padLeft("CPU/Call", 12);
   output += _.padLeft("Calls/Tick", 12);
   output += _.padLeft("CPU/Tick", 12);
+  output += _.padLeft("Total CPU", 12);
   output += _.padLeft("% of Tot\n", 12);
 
   ////  Data lines
@@ -187,6 +191,7 @@ function outputProfilerData() {
     output += _.padLeft(`${d.cpuPerCall.toFixed(2)}ms`, 12);
     output += _.padLeft(`${d.callsPerTick.toFixed(2)}`, 12);
     output += _.padLeft(`${d.cpuPerTick.toFixed(2)}ms`, 12);
+    output += _.padLeft(`${(d.totalCpu).toFixed(2)}ms`, 12);
     output += _.padLeft(`${(d.cpuPerTick / totalCpu * 100).toFixed(0)} %\n`, 12);
   });
 

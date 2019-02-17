@@ -3,6 +3,7 @@ import { Tasks } from "Tasks";
 import { GetRoomObjects } from "GetRoomObjects";
 import { MY_SIGNATURE } from "Constants";
 import { profile } from "./Profiler";
+import { TradeHub } from "TradeHub";
 
 @profile
 export class ProbeLogic {
@@ -492,7 +493,7 @@ export class ProbeLogic {
     var roomToAttack = flagToAttachFrom.pos;
     if (roomToAttack != null) {
       if (probe.room.name != roomToAttack.roomName) {
-        probe.creep.moveTo(roomToAttack);
+        probe.goTo(roomToAttack);
         return;
       }
       else {
@@ -502,29 +503,27 @@ export class ProbeLogic {
         const targetStructures = targetStructuresFromFlag.length == 0 ? probe.pos.findClosestByPath(FIND_HOSTILE_STRUCTURES) : targetStructuresFromFlag[0];
         if (targetCreeps && targetCreeps.pos.x != 0 && targetCreeps.pos.y != 0 && targetCreeps.pos.x != 49 && targetCreeps.pos.y != 49) {
           if (probe.attack(targetCreeps) == ERR_NOT_IN_RANGE) {
-            probe.creep.moveTo(targetCreeps, { visualizePathStyle: { stroke: '#ff0000' } });
+            probe.goTo(targetCreeps.pos, '#ff0000');
           }
-          if (probe.creep.rangedAttack(targetCreeps) == ERR_NOT_IN_RANGE) {
-            probe.creep.moveTo(targetCreeps, { visualizePathStyle: { stroke: '#ff0000' } });
+          if (probe.rangedAttack(targetCreeps) == ERR_NOT_IN_RANGE) {
+            probe.goTo(targetCreeps.pos, '#ff0000');
           }
         } else if (targetStructures) {
           if (probe.attack(targetStructures) == ERR_NOT_IN_RANGE) {//This quite not work, have to analyze it, probes still targeted other creeps
-            probe.creep.moveTo(targetStructures, { visualizePathStyle: { stroke: '#ff0000' } });
+            probe.goTo(targetStructures.pos, '#ff0000');
           }
-          if (probe.creep.rangedAttack(targetStructures) == ERR_NOT_IN_RANGE) {
-            probe.creep.moveTo(targetStructures, { visualizePathStyle: { stroke: '#ff0000' } });
+          if (probe.rangedAttack(targetStructures) == ERR_NOT_IN_RANGE) {
+            probe.goTo(targetStructures.pos, '#ff0000');
           }
         }
         else {
-          probe.creep.moveTo(flagToAttachFrom, { visualizePathStyle: { stroke: '#ff0000' } });
+          probe.goTo(flagToAttachFrom.pos, '#ff0000');
         }
       }
     }
   }
 
   public static armyHealerLogic(probe: Probe): void {
-    //if (probe.pos.y < 35 && probe.pos.roomName == "E32N46")
-    //  return;
     var flagToAttachFrom = Game.flags["WAR"];
     if (!flagToAttachFrom) {
       flagToAttachFrom = Game.flags["WAR Over"];//This flag is used just here, it is not used for reproduction
@@ -536,20 +535,20 @@ export class ProbeLogic {
 
     if (roomToAttack != null) {
       if (probe.room.name != roomToAttack.roomName) {
-        probe.creep.moveTo(roomToAttack);
+        probe.goTo(roomToAttack);
         return;
       }
       else {
         var wondedCreep = probe.pos.findClosestByRange(FIND_MY_CREEPS, { filter: function (object) { return object.hits < object.hitsMax } });
 
         if (wondedCreep && wondedCreep.pos.x != 0 && wondedCreep.pos.y != 0 && wondedCreep.pos.x != 49 && wondedCreep.pos.y != 49) {
-          if (probe.creep.heal(wondedCreep) == ERR_NOT_IN_RANGE) {
-            probe.creep.rangedHeal(wondedCreep)
-            probe.creep.moveTo(wondedCreep, { visualizePathStyle: { stroke: '#00ff00' } });
+          if (probe.heal(wondedCreep) == ERR_NOT_IN_RANGE) {
+            probe.rangedHeal(wondedCreep)
+            probe.goTo(wondedCreep.pos, '#00ff00');
           }
         }
         else {
-          probe.creep.moveTo(flagToAttachFrom, { visualizePathStyle: { stroke: '#00ff00' } });
+          probe.goTo(flagToAttachFrom.pos, '#00ff00');
         }
       }
     }
@@ -564,6 +563,20 @@ export class ProbeLogic {
     }
     else {
         probe.goToCashed(flagDecoy.pos);
+    }
+  }
+
+  public static merchantLogic(probe: Probe, tradeHub: TradeHub): void {
+    let storage = GetRoomObjects.getStorage(probe);
+    if (!storage || !tradeHub)
+      return;
+    if (tradeHub.getResourceAmountFromStorage(RESOURCE_ENERGY) < 10000) {
+      if (_.sum(probe.carry) === probe.carryCapacity) {
+        probe.transferAll(tradeHub.terminal)
+      }
+      else {
+        probe.withdraw(storage, RESOURCE_ENERGY);
+      }
     }
   }
 

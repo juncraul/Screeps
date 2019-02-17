@@ -18,6 +18,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
   //Memory.rooms = {}
   //Memory.profiler = {}
   //Memory.profiler.data = {}
+  //Memory.market = []
 
   //MemoryManager.initializeMemory();
   global.MemoryManager = new MemoryManager();

@@ -12,14 +12,15 @@ export class Tasks {
       case "shard3"://Public Free-Subscription
         return [
           "E33N44",
-          "E33N45",
-          "E33N43",
+          //"E33N45",
+          //"E33N43",
           "E32N45",
           "E31N44",
           //"E33N42",
           "E32N43",
           //"E33N46",
-          "E31N46"
+          "E31N46",
+          "E32N44"
         ];
       default:
         return [];
@@ -68,7 +69,7 @@ export class Tasks {
       case "shard3"://Public Free-Subscription
         switch (room.name) {
           case "E33N44":
-            return ["E33N45", "E33N43", "E33N42", "E32N44", "E33N46", "E32N45", "E31N46"];
+            return ["E33N45", "E33N43", "E33N42", "E33N46", "E32N45", "E31N46"];
           case "E32N44":
             return ["E31N44", "E32N43", "E32N45", "E31N49"]
           default:
@@ -103,8 +104,27 @@ export class Tasks {
     }
   }
 
-  public static getOrdersToCreate(): OrderSchedule[] {
-    return [new OrderSchedule(RESOURCE_ENERGY, 0.001, 10000)];
+  public static getSellOrdersToCreate(): OrderSchedule[] {
+    return [
+      //new OrderSchedule(RESOURCE_ENERGY, 0.001, 10000)
+    ];
+  }
+
+  public static getBuyOrdersToCreate(): OrderSchedule[] {
+    return [];
+  }
+
+  public static getBuysFromMarket(): OrderSchedule[] {
+    return [
+      new OrderSchedule(RESOURCE_ZYNTHIUM, 0.1, 1000),
+      new OrderSchedule(RESOURCE_KEANIUM, 0.1, 1000),
+      new OrderSchedule(RESOURCE_UTRIUM, 0.1, 1000),
+      new OrderSchedule(RESOURCE_LEMERGIUM, 0.1, 1000)
+    ];
+  }
+
+  public static getSellsToMarket(): OrderSchedule[] {
+    return [];
   }
 
   public static getmyRoomsWithController(): Room[] {

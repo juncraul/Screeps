@@ -73,6 +73,10 @@ export class Mothership {
         else if (Mothership.spawnClaimer(room, roomsToHarvest)) {
           console.log(room.name + " Spawning claimer.");
         }
+        else if (Mothership.spawnMerchant(room)) {
+          console.log(room.name + " Spawning merchant.");
+        }
+
       })
 
       let allCannons = Nexus.getCannons(room);
@@ -86,7 +90,10 @@ export class Mothership {
         let terminal = TradeHub.getTerminalFromRoom(room);
         if (terminal) {
           let tradeHub = new TradeHub(terminal);
-          tradeHub.setUpOrders();
+          tradeHub.setUpBuyOrders();
+          tradeHub.setUpSellOrders();
+          tradeHub.buyFromMarket();
+          tradeHub.sellToMarket();
         }
       }
     })
@@ -132,6 +139,13 @@ export class Mothership {
           break;
         case "decoy":
           ProbeLogic.decoyLogic(probe);
+          break;
+        case "merchant":
+          let terminal = TradeHub.getTerminalFromRoom(probe.room);//TODO: should only create one tradehub 
+          if (terminal) {
+            let tradeHub = new TradeHub(terminal);
+            ProbeLogic.merchantLogic(probe, tradeHub);
+          }
           break;
       }
     });
@@ -192,7 +206,7 @@ export class Mothership {
           maxClaimer++;
     return maxClaimer;
   }
-
+  
   private static spawnHarvester(roomToSpawnFrom: Room): boolean {
     let probeSetupHarvester: ProbeSetup;
     let probeSetupHarvesterOne = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 1 }, "harvester-" + Game.time, { role: "harvester" });
@@ -263,10 +277,9 @@ export class Mothership {
       }
     }
 
-    if (workBodyParts >= sources * bodyPartsPerSourceRequired) {
-      if (harvestersAboutToDie.length == 0 || (harvestersAboutToDie.length > 0 && workBodyParts >= (sources + 1) * bodyPartsPerSourceRequired)) {
-        return false;
-      }
+    if ((harvestersAboutToDie.length == 0 && workBodyParts >= sources * bodyPartsPerSourceRequired) ||
+        (harvestersAboutToDie.length > 0 && workBodyParts >= (sources + 1) * bodyPartsPerSourceRequired)) {
+      return false;
     }
 
     if (roomToSpawnFrom.energyAvailable < energyToUse) {
@@ -771,6 +784,45 @@ export class Mothership {
     let energyToUse = 50;//1 MOVE = 50
 
     Nexus.spawnCreep(probeDecoy, roomToSpawnFrom, energyToUse);
+    return true;
+  }
+
+  private static spawnMerchant(roomToSpawnFrom: Room): boolean {
+    let probeSetupMerchant: ProbeSetup;
+    let probeSetupMerchantSix = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 6 }, "merchant-" + Game.time, { role: "merchant" });
+    let merchants = Nexus.getProbes("merchant", roomToSpawnFrom.name);
+    let merchantsAboutToDie = _.filter(merchants, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
+    let controller = GetRoomObjects.getController(roomToSpawnFrom);
+    let energyToUse: number;
+    let terminal = roomToSpawnFrom.find(FIND_STRUCTURES, { filter: structure => structure.structureType == STRUCTURE_TERMINAL });
+
+    if (!controller || !terminal) {
+      return false;
+    }
+    switch (controller.level) {
+      case 1://300 Energy avilable
+      case 2://550 Energy available
+      case 3://800 Energy available
+      case 4://1300 Energy available
+      case 5://1800 Energy available
+        return false;
+      case 6://2300 Energy avilable
+      default://5300 Energy at least
+        energyToUse = 1700//17 Carry; 17 Move
+        probeSetupMerchant = probeSetupMerchantSix;
+        break;
+    }
+    //In case when not all extensions got a chance to be built.
+    energyToUse = roomToSpawnFrom.energyCapacityAvailable < energyToUse ? roomToSpawnFrom.energyCapacityAvailable : energyToUse;
+
+    if ((merchantsAboutToDie.length == 0 && merchants.length >= 1 ) || (merchantsAboutToDie.length > 0 && merchants.length >= 2)) {
+      return false;
+    }
+
+    if (roomToSpawnFrom.energyAvailable < energyToUse) {
+      return true;//Show our intend to spawn this probe when energy will be available
+    }
+    Nexus.spawnCreep(probeSetupMerchant, roomToSpawnFrom, energyToUse);
     return true;
   }
 }

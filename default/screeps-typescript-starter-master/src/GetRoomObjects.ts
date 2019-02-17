@@ -7,6 +7,12 @@ import { profile } from "./Profiler";
 @profile
 export class GetRoomObjects {
   public static getClosestActiveSourceDivided(probe: Probe, includeMineralDeposit: boolean = false): Mineral | Source | null {
+    //let previouslyAssignedTo = Game.getObjectById(probe.memory.targetId);
+    //if (previouslyAssignedTo instanceof Mineral && previouslyAssignedTo.mineralAmount > 0) {
+    //  return previouslyAssignedTo;
+    //} else if (previouslyAssignedTo instanceof Source && previouslyAssignedTo.energy > 0) {
+    //  return previouslyAssignedTo;
+    //}
     let sources: (Mineral | Source)[]
     sources = GetRoomObjects.getAvailableSources(probe.room);
     if (includeMineralDeposit) {
@@ -38,10 +44,9 @@ export class GetRoomObjects {
     let secondMinIndex = arraySources.indexOf(Math.min(...arraySources));//Get the second minimum index by temporarly seeing the minimum to a high number.
     arraySources[minIndex] -= 100;
 
-
     //If we already have the probe assign and no redistribution is need, exit func.
     let previouslyAssignedTo = sources.filter(s => s.id == probe.memory.targetId)[0];
-    if (previouslyAssignedTo && maxCount - minCount <= 1) {
+    if (previouslyAssignedTo && (((minCount != 0 && maxCount - minCount <= 1) || (minCount == 0 && maxCount - minCount < 1)))) {
       return previouslyAssignedTo;
     }
     else {
@@ -222,6 +227,11 @@ export class GetRoomObjects {
         (structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity * 0.45)
       )
     });
+    return deposit
+  }
+
+  public static getStorage(probe: Probe): Structure | null {
+    let deposit = probe.room.find(FIND_STRUCTURES, {filter: structure => (structure.structureType == STRUCTURE_STORAGE)})[0];
     return deposit
   }
 
