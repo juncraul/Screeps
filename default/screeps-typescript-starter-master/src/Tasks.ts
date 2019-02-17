@@ -1,5 +1,6 @@
 import { OrderSchedule } from "utils/OrderSchedule";
 import { profile } from "./Profiler";
+import { ReactionSchedule } from "utils/ReactionSchedule";
 
 @profile
 export class Tasks {
@@ -13,11 +14,11 @@ export class Tasks {
         return [
           "E33N44",
           //"E33N45",
-          //"E33N43",
+          "E33N43",
           "E32N45",
           "E31N44",
           //"E33N42",
-          "E32N43",
+          //"E32N43",
           //"E33N46",
           "E31N46",
           "E32N44"
@@ -34,7 +35,9 @@ export class Tasks {
       case "shard2"://Public
         return [];
       case "shard3"://Public Free-Subscription
-        return ["E32N44", "E32N45", "E31N46"];
+        return ["E32N44",
+          //"E32N45",
+          "E31N46"];
       default:
         return [];
     }
@@ -116,15 +119,26 @@ export class Tasks {
 
   public static getBuysFromMarket(): OrderSchedule[] {
     return [
-      new OrderSchedule(RESOURCE_ZYNTHIUM, 0.1, 1000),
-      new OrderSchedule(RESOURCE_KEANIUM, 0.1, 1000),
-      new OrderSchedule(RESOURCE_UTRIUM, 0.1, 1000),
-      new OrderSchedule(RESOURCE_LEMERGIUM, 0.1, 1000)
+      new OrderSchedule(RESOURCE_ZYNTHIUM, 0.2, 1000),
+      new OrderSchedule(RESOURCE_KEANIUM, 0.2, 1000),
+      new OrderSchedule(RESOURCE_UTRIUM, 0.2, 1000),
+      new OrderSchedule(RESOURCE_LEMERGIUM, 0.2, 1000),
+      new OrderSchedule(RESOURCE_OXYGEN, 0.2, 1000)
     ];
   }
 
   public static getSellsToMarket(): OrderSchedule[] {
     return [];
+  }
+
+  public static getReactionSchedules(): ReactionSchedule[] {
+    return [
+      new ReactionSchedule(RESOURCE_ZYNTHIUM_KEANITE, 1000),
+      new ReactionSchedule(RESOURCE_UTRIUM_LEMERGITE, 1000),
+      new ReactionSchedule(RESOURCE_GHODIUM, 1000),
+      new ReactionSchedule(RESOURCE_GHODIUM_OXIDE, 1000),
+      new ReactionSchedule(RESOURCE_LEMERGIUM_OXIDE, 1000),
+    ];
   }
 
   public static getmyRoomsWithController(): Room[] {

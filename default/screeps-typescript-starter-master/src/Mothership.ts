@@ -8,17 +8,18 @@ import { Stargate } from "Stargate";
 import { TradeHub } from "TradeHub";
 import { GetRoomObjects } from "GetRoomObjects";
 import { profile } from "./Profiler";
+import { Laboratory } from "Laboratory";
 
 
 @profile
 export class Mothership {
   public static work() {
     let roomsToHarvest = Tasks.getRoomsToHarvest();
-    let probeSetupBuilder = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "builder-" + Game.time, { role: "builder" });
-    let probeSetupRepairer = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "repairer-" + Game.time, { role: "repairer" });
 
     let myRooms = Tasks.getmyRoomsWithController();
     myRooms.forEach(function (room) {
+      let probeSetupBuilder = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "builder-" + Game.time, { role: "builder", homeName: room.name });
+      let probeSetupRepairer = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "repairer-" + Game.time, { role: "repairer", homeName: room.name });
       let spawns = room.find(FIND_STRUCTURES, { filter: structure => structure.structureType == STRUCTURE_SPAWN })
       let energyCapacityRoom = room.energyCapacityAvailable;
 
@@ -87,7 +88,7 @@ export class Mothership {
       Stargate.moveEnergyAround(room);
 
       if (Game.time % 5 == 0) {
-        let terminal = TradeHub.getTerminalFromRoom(room);
+        let terminal = GetRoomObjects.getTerminalFromRoom(room);
         if (terminal) {
           let tradeHub = new TradeHub(terminal);
           tradeHub.setUpBuyOrders();
@@ -141,10 +142,12 @@ export class Mothership {
           ProbeLogic.decoyLogic(probe);
           break;
         case "merchant":
-          let terminal = TradeHub.getTerminalFromRoom(probe.room);//TODO: should only create one tradehub 
+          let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);//TODO: should only create one tradehub
+          let labs = GetRoomObjects.getLabs(probe.room);
           if (terminal) {
             let tradeHub = new TradeHub(terminal);
-            ProbeLogic.merchantLogic(probe, tradeHub);
+            let laboratory = new Laboratory(labs);
+            ProbeLogic.merchantLogic(probe, tradeHub, laboratory);
           }
           break;
       }
@@ -209,9 +212,11 @@ export class Mothership {
   
   private static spawnHarvester(roomToSpawnFrom: Room): boolean {
     let probeSetupHarvester: ProbeSetup;
-    let probeSetupHarvesterOne = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 1 }, "harvester-" + Game.time, { role: "harvester" });
-    let probeSetupHarvesterTwo = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 3 }, "harvester-" + Game.time, { role: "harvester" });
-    let probeSetupHarvesterElite = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [MOVE, MOVE], sizeLimit: 5 }, "harvester-" + Game.time, { role: "harvester" });
+    let probeSetupHarvesterOne = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 1 }, "harvester-" + Game.time, { role: "harvester", homeName: roomToSpawnFrom.name });
+    let probeSetupHarvesterTwo = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 3 }, "harvester-" + Game.time, { role: "harvester", homeName: roomToSpawnFrom.name });
+    let probeSetupHarvesterThree = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [MOVE, MOVE], sizeLimit: 5 }, "harvester-" + Game.time, { role: "harvester", homeName: roomToSpawnFrom.name });
+    let probeSetupHarvesterFour = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [MOVE, MOVE], sizeLimit: 5 }, "harvester-" + Game.time, { role: "harvester", homeName: roomToSpawnFrom.name });
+    let probeSetupHarvesterFive = new ProbeSetup({ ordered: true, pattern: [WORK, WORK, MOVE], sizeLimit: 15 }, "harvester-" + Game.time, { role: "harvester", homeName: roomToSpawnFrom.name, harvestCooldownXTicks: 1 });
     let harvesters = Nexus.getProbes("harvester", roomToSpawnFrom.name);
     let carriers = Nexus.getProbes("carrier", roomToSpawnFrom.name);
     let longDistanceHarvesters = Nexus.getProbes("longDistanceHarvester", roomToSpawnFrom.name, true);
@@ -248,12 +253,17 @@ export class Mothership {
         probeSetupHarvester = probeSetupHarvesterTwo;
         break;
       case 3://800 Energy available
-      default://1300 Energy at least
         energyToUse = 600;//5 Work; 2 Move //This rely that it stands on top of container
-        probeSetupHarvester = probeSetupHarvesterElite;
-        //Not used perhaps will need it
-        //energyToUse = 750//6 Work; 1 Carry; 2 Move
-        //probeSetupHarvester = probeSetupHarvesterElite;
+        probeSetupHarvester = probeSetupHarvesterThree;
+        break;
+      case 4://1300 Energy available
+        energyToUse = 600;//5 Work; 2 Move //This rely that it stands on top of container
+        probeSetupHarvester = probeSetupHarvesterFour;
+        break;
+      default://1800 Energy at least
+        energyToUse = 1250;//10 Work; 5 Move //This rely that it stands on top of container
+        probeSetupHarvester = probeSetupHarvesterFive;//This also harvest every second tick to save CPU time
+        bodyPartsPerSourceRequired = 10;
         break;
     }
     //In case when not all extensions got a chance to be built.
@@ -291,11 +301,11 @@ export class Mothership {
 
   private static spawnCarrier(roomToSpawnFrom: Room): boolean {
     let probeSetupCarrier: ProbeSetup;
-    let probeSetupCarrierOne = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 1 }, "carrier-" + Game.time, { role: "carrier" });
-    let probeSetupCarrierTwo = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 2 }, "carrier-" + Game.time, { role: "carrier" });
-    let probeSetupCarrierThree = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 5 }, "carrier-" + Game.time, { role: "carrier" });
-    let probeSetupCarrierFour = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 10 }, "carrier-" + Game.time, { role: "carrier" });
-    let probeSetupCarrierElite = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 17 }, "carrier-" + Game.time, { role: "carrier" });
+    let probeSetupCarrierOne = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 1 }, "carrier-" + Game.time, { role: "carrier", homeName: roomToSpawnFrom.name });
+    let probeSetupCarrierTwo = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 2 }, "carrier-" + Game.time, { role: "carrier", homeName: roomToSpawnFrom.name });
+    let probeSetupCarrierThree = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 5 }, "carrier-" + Game.time, { role: "carrier", homeName: roomToSpawnFrom.name });
+    let probeSetupCarrierFour = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 10 }, "carrier-" + Game.time, { role: "carrier", homeName: roomToSpawnFrom.name });
+    let probeSetupCarrierElite = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 17 }, "carrier-" + Game.time, { role: "carrier", homeName: roomToSpawnFrom.name });
     let carriers = Nexus.getProbes("carrier", roomToSpawnFrom.name);
     let carriersAboutToDie = _.filter(carriers, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
     let controller = GetRoomObjects.getController(roomToSpawnFrom);
@@ -360,10 +370,10 @@ export class Mothership {
 
   private static spawnUpgrader(roomToSpawnFrom: Room): boolean {
     let probeSetupUpgrader: ProbeSetup;
-    let probeSetupUpgraderOne = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 1 }, "upgrader-" + Game.time, { role: "upgrader" });
-    let probeSetupUpgraderTwo = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 3 }, "upgrader-" + Game.time, { role: "upgrader" });
-    let probeSetupUpgraderThree = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 5 }, "upgrader-" + Game.time, { role: "upgrader" });
-    let probeSetupUpgraderElite = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, CARRY, MOVE, MOVE, MOVE], sizeLimit: 10 }, "upgrader-" + Game.time, { role: "upgrader" });
+    let probeSetupUpgraderOne = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 1 }, "upgrader-" + Game.time, { role: "upgrader", homeName: roomToSpawnFrom.name });
+    let probeSetupUpgraderTwo = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 3 }, "upgrader-" + Game.time, { role: "upgrader", homeName: roomToSpawnFrom.name });
+    let probeSetupUpgraderThree = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 5 }, "upgrader-" + Game.time, { role: "upgrader", homeName: roomToSpawnFrom.name });
+    let probeSetupUpgraderElite = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, CARRY, MOVE, MOVE, MOVE], sizeLimit: 10 }, "upgrader-" + Game.time, { role: "upgrader", homeName: roomToSpawnFrom.name });
     let upgraders = Nexus.getProbes("upgrader", roomToSpawnFrom.name);
     let upgradersAboutToDie = _.filter(upgraders, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
     let controller = GetRoomObjects.getController(roomToSpawnFrom);
@@ -458,7 +468,7 @@ export class Mothership {
       let controller = GetRoomObjects.getController(roomToSpawnFrom);
       let remoteController = roomToHarvest != null ? GetRoomObjects.getController(roomToHarvest) : null;
       let roomNeedsClaimed = roomToHarvest != null ? Tasks.getRoomsToClaim().includes(roomToHarvest.name) : false;
-      let spawnerInRemote = roomToHarvest != null ? GetRoomObjects.getSpawn(roomToHarvest) : false;
+      let spawnerInRemote = roomToHarvest != null ? GetRoomObjects.getSpawn(roomToHarvest) : null;
       let energyToUse: number;
       let levelBlueprintToBuild: number;
 
@@ -484,7 +494,6 @@ export class Mothership {
 
       if (workBodyParts >= sources * 5 || roomToSpawnFrom.energyAvailable < energyToUse)
         continue;
-
 
       if (spawnerInRemote) {
         if (roomNeedsClaimed && remoteController && remoteController.level >= 3 && workBodyParts >= 1 * 5) {
@@ -789,7 +798,7 @@ export class Mothership {
 
   private static spawnMerchant(roomToSpawnFrom: Room): boolean {
     let probeSetupMerchant: ProbeSetup;
-    let probeSetupMerchantSix = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 6 }, "merchant-" + Game.time, { role: "merchant" });
+    let probeSetupMerchantSix = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 6 }, "merchant-" + Game.time, { role: "merchant", homeName: roomToSpawnFrom.name });
     let merchants = Nexus.getProbes("merchant", roomToSpawnFrom.name);
     let merchantsAboutToDie = _.filter(merchants, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
     let controller = GetRoomObjects.getController(roomToSpawnFrom);

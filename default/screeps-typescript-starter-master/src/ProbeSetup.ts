@@ -19,9 +19,9 @@ export function bodyCost(bodyparts: BodyPartConstant[]): number {
 export class ProbeSetup {
   bodySetup: bodySetup;
   name: string;
-  memory: any;
+  memory: CreepMemory;
 
-  constructor(bodySetup = {}, name: string, memory: any) {
+  constructor(bodySetup = {}, name: string, memory: CreepMemory) {
     _.defaults(bodySetup, {
       pattern: [],
       sizeLimit: Infinity,

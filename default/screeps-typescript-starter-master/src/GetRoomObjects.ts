@@ -46,7 +46,7 @@ export class GetRoomObjects {
 
     //If we already have the probe assign and no redistribution is need, exit func.
     let previouslyAssignedTo = sources.filter(s => s.id == probe.memory.targetId)[0];
-    if (previouslyAssignedTo && (((minCount != 0 && maxCount - minCount <= 1) || (minCount == 0 && maxCount - minCount < 1)))) {
+    if (previouslyAssignedTo && maxCount - minCount <= 1) {
       return previouslyAssignedTo;
     }
     else {
@@ -175,7 +175,7 @@ export class GetRoomObjects {
     return target instanceof StructureController ? target : null;
   }
 
-  public static getSpawn(probeOrRoom: Probe | Room): StructureController | null {
+  public static getSpawn(probeOrRoom: Probe | Room): StructureSpawn | null {
     let target: any;
     if (probeOrRoom instanceof Probe) {
       target = probeOrRoom.room.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_SPAWN) })[0];
@@ -183,7 +183,7 @@ export class GetRoomObjects {
     else {
       target = probeOrRoom.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_SPAWN) })[0];
     }
-    return target instanceof StructureController ? target : null;
+    return target instanceof StructureSpawn ? target : null;
   }
 
   public static getConstructionSiteWithinRange(pos: RoomPosition, structureType: StructureConstant, range: number): ConstructionSite | null {
@@ -210,12 +210,21 @@ export class GetRoomObjects {
     return deposit
   }
 
+  public static getTowerToSupply(probe: Probe): Structure | null {
+    let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
+      filter: structure => (
+      (structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity * 0.90))
+    });
+
+    return deposit
+  }
+
+
   public static getStructureDepositToSupply(probe: Probe): Structure | null {
     let deposit = probe.pos.findClosestByPath(FIND_STRUCTURES, {
       filter: structure => (
         ((structure.structureType == STRUCTURE_STORAGE ||
           structure.structureType == STRUCTURE_TERMINAL) && _.sum(structure.store) < structure.storeCapacity))
-        || (structure.structureType == STRUCTURE_TOWER && structure.energy < structure.energyCapacity * 0.90)
     });
 
     return deposit
@@ -344,5 +353,26 @@ export class GetRoomObjects {
       }
     })
     return structuresFiltered;
+  }
+
+  public static getTerminalFromRoom(room: Room): StructureTerminal | null {
+    let structure = room.find(FIND_MY_STRUCTURES, { filter: structure => structure.structureType == STRUCTURE_TERMINAL })[0];
+    if (structure instanceof StructureTerminal) {
+      return structure;
+    }
+    return null;
+  }
+
+
+  public static getLabs(room: Room): StructureLab[] {
+    let structures = room.find(FIND_MY_STRUCTURES, { filter: structure => structure.structureType == STRUCTURE_LAB });
+    let labs: StructureLab[] = [];
+    for (let i in structures) {
+      let lab = structures[i];
+      if (lab instanceof StructureLab) {
+        labs.push(lab)
+      }
+    }
+    return labs;
   }
 }

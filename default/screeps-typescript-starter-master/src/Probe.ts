@@ -81,7 +81,15 @@ export class Probe {
     return result;
   }
 
-  harvest(source: Source | Mineral) {
+  harvest(source: Source | Mineral) {//Don't think will ever have the creep's internal cooldown longer than EXTRACTOR_COOLDOWN
+    let cooldownTime = source instanceof Mineral ? EXTRACTOR_COOLDOWN : (this.creep.memory.harvestCooldownXTicks ? this.creep.memory.harvestCooldownXTicks : 0);
+    if (this.creep.memory.lastHarvestTick) {
+      if (this.creep.memory.lastHarvestTick + cooldownTime >= Game.time) {
+        this.memory.targetId = source.id;
+        return -100;
+      }
+    }
+
     let result = this.creep.harvest(source);
     if (result == ERR_NOT_IN_RANGE) {
       if (this.memory.useCashedPath) {
@@ -89,6 +97,8 @@ export class Probe {
       } else {
         this.goTo(source.pos);
       }
+    } else {
+      this.creep.memory.lastHarvestTick = Game.time;
     }
     this.memory.targetId = source.id;
     return result;
@@ -97,9 +107,19 @@ export class Probe {
   transfer(target: Creep | Probe | Structure, resourceType: ResourceConstant, amount?: number) {
     let result: ScreepsReturnCode;
     if (target instanceof Probe) {
-      result = this.creep.transfer(target.creep, resourceType, amount);
+      if (amount) {
+          result = this.creep.transfer(target.creep, resourceType, this.carry[resourceType]! < amount ? this.carry[resourceType]! : amount);
+      }
+      else {
+        result = this.creep.transfer(target.creep, resourceType);
+      }
     } else {
-      result = this.creep.transfer(target, resourceType, amount);
+      if (amount) {
+        result = this.creep.transfer(target, resourceType, this.carry[resourceType]! < amount ? this.carry[resourceType]! : amount);
+      }
+      else {
+        result = this.creep.transfer(target, resourceType);
+      }
     }
     if (result == ERR_NOT_IN_RANGE) {
       if (this.memory.useCashedPath) {
@@ -134,7 +154,14 @@ export class Probe {
   }
 
   withdraw(target: Tombstone | Structure, resourceType: ResourceConstant, amount?: number) {
-    let result = this.creep.withdraw(target, resourceType, amount);
+    let result;
+    if (amount) {
+      let freeSpace = this.carryCapacity - _.sum(this.carry);
+      result = this.creep.withdraw(target, resourceType, freeSpace < amount ? freeSpace : amount);
+    }
+    else {
+      result = this.creep.withdraw(target, resourceType);
+    }
     if (result == ERR_NOT_IN_RANGE) {
       if (this.memory.useCashedPath) {
         this.goToCashed(target.pos)

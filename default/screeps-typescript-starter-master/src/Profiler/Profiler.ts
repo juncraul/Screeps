@@ -1,7 +1,7 @@
 /* tslint:disable:ban-types */
 
 import { PROFILER_ENABLED } from '../Constants';
-import { Mothership } from 'Mothership';
+//import { Mothership } from 'Mothership';
 
 export function init(): Profiler {
   const defaults = {
@@ -52,7 +52,7 @@ export function init(): Profiler {
         this.status();
     },
   };
-  wrapFunction(Mothership.work, 'Mothership.work');
+  //wrapFunction(Mothership.work, 'Mothership.work');
   return cli;
 }
 

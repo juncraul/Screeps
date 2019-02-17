@@ -59,7 +59,7 @@ export class TradeHub {
     let orders = Tasks.getBuysFromMarket();
     for (let i in orders) {
       let ordersMarket = TradeHub.getOrdersFromMarket(orders[i].resourceType, orders[i].price, "sell");
-      let amountToBuy = orders[i].threshold - this.getResourceAmountFromStorage(orders[i].resourceType)
+      let amountToBuy = orders[i].threshold - this.getResourceAmountFromTerminal(orders[i].resourceType)
       if (amountToBuy <= 0)
         continue;
       //TODO: need to take in consideration the order's availablitity 
@@ -96,7 +96,7 @@ export class TradeHub {
     return result;
   }
 
-  getResourceAmountFromStorage(resource: ResourceConstant): number {
+  getResourceAmountFromTerminal(resource: ResourceConstant): number {
     return (this.store[resource] ? this.store[resource]! : 0)
   }
 
@@ -118,13 +118,4 @@ export class TradeHub {
     }
     return ordersReturn;
   }
-
-  static getTerminalFromRoom(room: Room): StructureTerminal | null {
-    let structure = room.find(FIND_MY_STRUCTURES, { filter: structure => structure.structureType == STRUCTURE_TERMINAL })[0];
-    if (structure instanceof StructureTerminal) {
-      return structure;
-    }
-    return null;
-  }
-
 }

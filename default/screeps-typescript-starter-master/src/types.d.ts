@@ -2,16 +2,18 @@
 
 // memory extension samples
 interface CreepMemory {
-  name: string;
+  //name: string;
   role: string;
-  isGathering: boolean;
-  targetId: string;
-  isWorking: boolean;
-  remote: string;
+  isGathering?: boolean;
+  targetId?: string;
+  isWorking?: boolean;
+  remote?: string;
   homeName: string;
-  useCashedPath: boolean;
-  path: string;
-  previousPosition: RoomPosition;
+  useCashedPath?: boolean;
+  path?: string;
+  previousPosition?: RoomPosition;
+  harvestCooldownXTicks?: number;
+  lastHarvestTick?: number;
 }
 
 interface Path {
@@ -31,6 +33,14 @@ interface RoomMemory {
   controller: string;
   sources: string[]
   controllerContainer: string | undefined;
+}
+
+interface MerchantTask {
+  remove?: boolean;
+  add?: boolean;
+  mineralType?: ResourceConstant;
+  amount?: number;
+  lab: StructureLab;
 }
 
 // `global` extension samples
