@@ -90,7 +90,7 @@ export class TradeHub {
 
   completeOrder(order: Order, amount: number, targetRoom: string): number {
     let result = Game.market.deal(order.id, amount, targetRoom);
-    let storeResult = `Result of the order deal is: ${result} ID:${order.id} TargetRoom:${targetRoom} Amount:${amount} Price:${order.price} TotalPrice: ${TradeHub.getTotalTranCost(amount, order.price, this.room.name, order.roomName!)}`;
+    let storeResult = `Result of the order deal is: ${result} ID:${order.id} TargetRoom:${targetRoom} Amount:${amount} Price:${order.price} Resource:${order.resourceType} TotalPrice: ${TradeHub.getTotalTranCost(amount, order.price, this.room.name, order.roomName!)}`;
     Memory.market.push(storeResult);
     console.log(storeResult)
     return result;

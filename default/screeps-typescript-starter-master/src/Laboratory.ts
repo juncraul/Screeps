@@ -2,7 +2,7 @@
 import { profile } from "./Profiler";
 import { Tasks } from "Tasks";
 import { TradeHub } from "TradeHub";
-import { REAGENTS, THRESHOLD_LAB_MIN_REFILL } from "Constants";
+import { REAGENTS, THRESHOLD_LAB_MIN_REFILL, REACTION_BATCH } from "Constants";
 import { Helper } from "Helper";
 
 @profile
@@ -42,6 +42,8 @@ export class Laboratory {
   }
 
   getLaboratoryJob(tradeHub: TradeHub): MerchantTask | null {
+    if (this.labs.length < 3)
+      return null;
     let reactionSchedules = Tasks.getReactionSchedules();
     let currentReactionFromMemory = Helper.getCashedMemory("CurrentReaction", null);
     if (currentReactionFromMemory) {
@@ -67,15 +69,18 @@ export class Laboratory {
     for (let i in reactionSchedules) {
       let amoutToProduce = reactionSchedules[i].threshold - tradeHub.getResourceAmountFromTerminal(reactionSchedules[i].resourceType);
       if (amoutToProduce > 0) {
+        amoutToProduce = amoutToProduce > REACTION_BATCH ? REACTION_BATCH : amoutToProduce;//Just do reactions in batches
         Helper.setCashedMemory("CurrentReaction", reactionSchedules[i].resourceType);
         let reagent0 = REAGENTS[reactionSchedules[i].resourceType]["0"];
         let reagent1 = REAGENTS[reactionSchedules[i].resourceType]["1"];
+        let minReagentRemaining = tradeHub.getResourceAmountFromTerminal(reagent0) < tradeHub.getResourceAmountFromTerminal(reagent1) ? tradeHub.getResourceAmountFromTerminal(reagent0) : tradeHub.getResourceAmountFromTerminal(reagent1)
+        amoutToProduce = minReagentRemaining < amoutToProduce ? minReagentRemaining : amoutToProduce;//Terminal almost empty, do reaction with what is left.
         let merchantTask: MerchantTask | null;
-        merchantTask = this.getMerchantTaskPerLab(this.labs[0], reagent0, amoutToProduce)
+        merchantTask = this.getMerchantTaskPerLab(this.labs[0], reagent0, amoutToProduce - this.getMineralAmountFromLab(this.labs[2], reactionSchedules[i].resourceType))
         if (merchantTask) {
           return merchantTask;
         } else {
-          merchantTask = this.getMerchantTaskPerLab(this.labs[1], reagent1, amoutToProduce)
+          merchantTask = this.getMerchantTaskPerLab(this.labs[1], reagent1, amoutToProduce - this.getMineralAmountFromLab(this.labs[2], reactionSchedules[i].resourceType))
           if (merchantTask) {
             return merchantTask;
           } else {

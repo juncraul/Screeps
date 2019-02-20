@@ -1,8 +1,13 @@
 export const MY_SIGNATURE = "Just changing stuff and seeing what happens";
 
 export const PROFILER_ENABLED: boolean = true;
-
 export const THRESHOLD_LAB_MIN_REFILL: number = 300;
+export const REACTION_BATCH: number = 500;
+export const TERMINAL_MIN_ENERGY: number = 15000;
+export const TERMINAL_MAX_ENERGY: number = 20000;
+export const TERMINAL_MIN_MINERAL: number = 1000;
+export const TERMINAL_MAX_MINERAL: number = 3000;
+
 
 export const REAGENTS: { [product: string]: [ResourceConstant, ResourceConstant] } = {
   // Tier 0

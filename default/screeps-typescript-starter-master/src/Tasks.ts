@@ -15,7 +15,7 @@ export class Tasks {
           "E33N44",
           //"E33N45",
           "E33N43",
-          "E32N45",
+          //"E32N45",
           "E31N44",
           //"E33N42",
           //"E32N43",
@@ -123,7 +123,9 @@ export class Tasks {
       new OrderSchedule(RESOURCE_KEANIUM, 0.2, 1000),
       new OrderSchedule(RESOURCE_UTRIUM, 0.2, 1000),
       new OrderSchedule(RESOURCE_LEMERGIUM, 0.2, 1000),
-      new OrderSchedule(RESOURCE_OXYGEN, 0.2, 1000)
+      new OrderSchedule(RESOURCE_OXYGEN, 0.2, 1000),
+      new OrderSchedule(RESOURCE_HYDROGEN, 0.2, 1000),
+      new OrderSchedule(RESOURCE_CATALYST, 0.3, 1000),
     ];
   }
 
@@ -137,7 +139,11 @@ export class Tasks {
       new ReactionSchedule(RESOURCE_UTRIUM_LEMERGITE, 1000),
       new ReactionSchedule(RESOURCE_GHODIUM, 1000),
       new ReactionSchedule(RESOURCE_GHODIUM_OXIDE, 1000),
-      new ReactionSchedule(RESOURCE_LEMERGIUM_OXIDE, 1000),
+      new ReactionSchedule(RESOURCE_GHODIUM_HYDRIDE, 1000),
+      new ReactionSchedule(RESOURCE_LEMERGIUM_OXIDE, 2000),
+      new ReactionSchedule(RESOURCE_HYDROXIDE, 1000),
+      new ReactionSchedule(RESOURCE_LEMERGIUM_ALKALIDE, 2000),
+      new ReactionSchedule(RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE, 5000),
     ];
   }
 

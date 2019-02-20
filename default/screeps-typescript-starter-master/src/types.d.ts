@@ -14,6 +14,7 @@ interface CreepMemory {
   previousPosition?: RoomPosition;
   harvestCooldownXTicks?: number;
   lastHarvestTick?: number;
+  resourceMovementTask?: ResourceMovementTask;
 }
 
 interface Path {
@@ -33,6 +34,13 @@ interface RoomMemory {
   controller: string;
   sources: string[]
   controllerContainer: string | undefined;
+}
+
+interface ResourceMovementTask {
+  amount: number;
+  mineralType: ResourceConstant;
+  fromId: string;
+  toId: string;
 }
 
 interface MerchantTask {

@@ -1,7 +1,7 @@
 import { Probe } from "Probe";
 import { Tasks } from "Tasks";
 import { GetRoomObjects } from "GetRoomObjects";
-import { MY_SIGNATURE } from "Constants";
+import { MY_SIGNATURE, TERMINAL_MIN_ENERGY, TERMINAL_MAX_ENERGY, TERMINAL_MIN_MINERAL, TERMINAL_MAX_MINERAL } from "Constants";
 import { profile } from "./Profiler";
 import { TradeHub } from "TradeHub";
 import { Laboratory } from "Laboratory";
@@ -181,26 +181,32 @@ export class ProbeLogic {
       }
     }
     if (probe.memory.isGathering) {
-      let deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, true, true, 200, false);
-      if (!Game.flags["WAR"] && !deposit) {
-        deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, false, true, 200, false);//If at war, pick up from storage as well
-      } 
-      if (deposit) {
-        probe.withdrawAll(deposit);
-      } else {
-        let droppedResource = GetRoomObjects.getDroppedResource(probe.pos);
-        if (droppedResource) {
-          probe.pickup(droppedResource);
-        }
-        else {
-          deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, true, false, 200, false);
-          if (deposit) {
-            probe.withdrawAll(deposit);
+      let tombstone = GetRoomObjects.getClosestTombstone(probe.pos);
+      if (tombstone) {
+        probe.withdrawAll(tombstone);
+      }
+      else {
+        let deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, true, true, 200, false);
+        if (!Game.flags["WAR"] && !deposit) {
+          deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, false, true, 200, false);//If at war, pick up from storage as well
+        } 
+        if (deposit) {
+          probe.withdrawAll(deposit);
+        } else {
+          let droppedResource = GetRoomObjects.getDroppedResource(probe.pos);
+          if (droppedResource) {
+            probe.pickup(droppedResource);
           }
-        }
-        if (!deposit && _.sum(probe.carry) > 0) {//Instead of waiting for a deposit to fill up, just return back what it currenlty has.
-          probe.memory.isWorking = true;
-          probe.memory.isGathering = false;
+          else {
+            deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, true, false, 200, false);
+            if (deposit) {
+              probe.withdrawAll(deposit);
+            }
+          }
+          if (!deposit && _.sum(probe.carry) > 0) {//Instead of waiting for a deposit to fill up, just return back what it currenlty has.
+            probe.memory.isWorking = true;
+            probe.memory.isGathering = false;
+          }
         }
       }
     }
@@ -577,49 +583,44 @@ export class ProbeLogic {
     let storage = GetRoomObjects.getStorage(probe);
     if (!storage || !tradeHub)
       return;
-    if (tradeHub.getResourceAmountFromTerminal(RESOURCE_ENERGY) < 10000) {
-      if (_.sum(probe.carry) === probe.carryCapacity) {
-        probe.transferAll(tradeHub.terminal)
-      }
-      else {
-        probe.withdraw(storage, RESOURCE_ENERGY);
-      }
-    }
-    else {
-      let merchantTask = laboratory.getLaboratoryJob(tradeHub);
-      if (merchantTask) {
-        if (merchantTask.add && merchantTask.mineralType) {
-          if (_.sum(probe.carry) != 0 && probe.carry[merchantTask.mineralType]! != _.sum(probe.carry)) {
+    let merchantTask = laboratory.getLaboratoryJob(tradeHub);
+    if (merchantTask) {
+      if (merchantTask.add && merchantTask.mineralType) {
+        if (_.sum(probe.carry) != 0 && probe.carry[merchantTask.mineralType]! != _.sum(probe.carry)) {
+          let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);
+          if (terminal) {
+            probe.transferAll(terminal);//Start clean before moving minerals in labs
+          }
+        }
+        else {
+          if (probe.carry[merchantTask.mineralType]! > 0) {
+            probe.transfer(merchantTask.lab, merchantTask.mineralType, merchantTask.amount)
+          } else {
             let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);
             if (terminal) {
-              probe.transferAll(terminal);//Start clean before moving minerals in labs
-            }
-          }
-          else {
-            if (probe.carry[merchantTask.mineralType]! > 0) {
-              probe.transfer(merchantTask.lab, merchantTask.mineralType, merchantTask.amount)
-            } else {
-              let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);
-              if (terminal) {
-                probe.withdraw(terminal, merchantTask.mineralType, merchantTask.amount);
-              }
+              let a = terminal.store[merchantTask.mineralType] ? terminal.store[merchantTask.mineralType] : 0
+              let b = merchantTask.amount ? merchantTask.amount : 0
+              merchantTask.amount = a! < b ? a : b;//TODO definetely change this
+              probe.withdraw(terminal, merchantTask.mineralType, merchantTask.amount);
             }
           }
         }
-        if (merchantTask.remove) {
-          if (_.sum(probe.carry) === 0) {
-            probe.withdrawAll(merchantTask.lab);
-          }
-          else {
-            let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);
-            if (terminal) {
-              probe.transferAll(terminal);
-            }
+      }
+      if (merchantTask.remove) {
+        if (_.sum(probe.carry) === 0) {
+          probe.withdrawAll(merchantTask.lab);
+        }
+        else {
+          let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);
+          if (terminal) {
+            probe.transferAll(terminal);
           }
         }
-      } else {
-        let labs = GetRoomObjects.getLabs(probe.room).filter(a => a.energy < a.energyCapacity);//Check for labs that need energy refill
-        if (labs.length != 0 && _.sum(probe.carry) == probe.carry[RESOURCE_ENERGY]) {
+      }
+    } else {
+      let labs = GetRoomObjects.getLabs(probe.room).filter(a => a.energy < a.energyCapacity);//Check for labs that need energy refill
+      if (labs.length != 0) {
+        if (_.sum(probe.carry) == probe.carry[RESOURCE_ENERGY]) {
           if (_.sum(probe.carry) != probe.carryCapacity) {
             let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);
             if (terminal) {
@@ -639,7 +640,56 @@ export class ProbeLogic {
           }
         }
       }
+      else {
+        let resourceMovementTask = probe.memory.resourceMovementTask ? probe.memory.resourceMovementTask : this.getResourceMovementTask(probe);
+        if (resourceMovementTask) {
+          probe.memory.resourceMovementTask = resourceMovementTask;
+          let structureFrom = Game.getObjectById(resourceMovementTask.fromId);
+          let structureTo = Game.getObjectById(resourceMovementTask.toId);
+          //console.log(JSON.stringify(resourceMovementTask))
+          if (structureFrom && structureTo && structureFrom instanceof Structure && structureTo instanceof Structure) {
+            if (_.sum(probe.carry) === probe.carryCapacity) {
+              probe.transfer(structureTo, resourceMovementTask.mineralType, resourceMovementTask.amount)
+              probe.memory.resourceMovementTask = undefined;
+            }
+            else {
+              probe.withdraw(structureFrom, resourceMovementTask.mineralType, resourceMovementTask.amount);
+              probe.memory.resourceMovementTask = undefined;
+            }
+          }
+        }
+      }
     }
+  }
+  
+  private static getResourceMovementTask(probe: Probe): ResourceMovementTask | null {
+    let storage = GetRoomObjects.getStorage(probe);
+    let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);
+    if (!storage || !terminal)
+      return null;
+    //console.log("-------")
+    for (let i in terminal.store) {
+      //console.log(i + " " + terminal.store[<ResourceConstant>i] + " " + storage.store[<ResourceConstant>i]);
+      if (i == RESOURCE_ENERGY) {
+        if (terminal.store[<ResourceConstant>i]! > TERMINAL_MAX_ENERGY) {
+          return { amount: terminal.store[<ResourceConstant>i]! - TERMINAL_MAX_ENERGY, fromId: terminal.id, toId: storage.id, mineralType: RESOURCE_ENERGY }
+        }
+      } else if (terminal.store[<ResourceConstant>i]! > TERMINAL_MAX_MINERAL) {
+        return { amount: terminal.store[<ResourceConstant>i]! - TERMINAL_MAX_MINERAL, fromId: terminal.id, toId: storage.id, mineralType: RESOURCE_ENERGY }
+      }
+    }
+    //console.log("--")
+    for (let i in storage.store) {
+      //console.log(i + " " + terminal.store[<ResourceConstant>i] + " " + storage.store[<ResourceConstant>i]);
+      if (i == RESOURCE_ENERGY) {
+        if (terminal.store[<ResourceConstant>i]! < TERMINAL_MIN_ENERGY) {
+          return { amount: TERMINAL_MIN_ENERGY - (terminal.store[<ResourceConstant>i] ? terminal.store[<ResourceConstant>i]! : 0), fromId: storage.id, toId: terminal.id, mineralType: RESOURCE_ENERGY }
+        }
+      } else if (terminal.store[<ResourceConstant>i]! < TERMINAL_MIN_MINERAL) {
+        return { amount: TERMINAL_MIN_MINERAL - (terminal.store[<ResourceConstant>i] ? terminal.store[<ResourceConstant>i]! : 0), fromId: storage.id, toId: terminal.id, mineralType: RESOURCE_ENERGY }
+      }
+    }
+    return null;
   }
 
   private static goToRemoteRoom(probe: Probe, roomName: string) {

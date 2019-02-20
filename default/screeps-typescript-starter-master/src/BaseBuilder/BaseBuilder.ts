@@ -92,13 +92,21 @@ export class BaseBuilder {
       }
     }
 
-    //TODO: Add this as a flag function
-    //for (let i = 0; i < 50; i++)
-    //  for (let j = 0; j < 50; j++) {
-    //    let structure = Game.rooms["E31N46"].lookForAt(LOOK_STRUCTURES, i, j)[0]
-    //    if (structure)
-    //      structure.destroy();
-    //  }
+    flag = Game.flags["DeleteStructures"]
+    if (flag) {
+      let structures = flag.room!.find(FIND_STRUCTURES);
+      for (let i in structures) {
+        structures[i].destroy();
+      }
+    }
+
+    flag = Game.flags["DeleteConstructionSites"]
+    if (flag) {
+      let constructionSites = flag.room!.find(FIND_CONSTRUCTION_SITES);
+      for (let i in constructionSites) {
+        constructionSites[i].remove();
+      }
+    }
 
     flag = Game.flags["CreateSpawn"];
     if (flag && flag.room) {

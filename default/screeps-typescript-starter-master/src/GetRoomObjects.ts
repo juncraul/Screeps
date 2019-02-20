@@ -239,9 +239,9 @@ export class GetRoomObjects {
     return deposit
   }
 
-  public static getStorage(probe: Probe): Structure | null {
-    let deposit = probe.room.find(FIND_STRUCTURES, {filter: structure => (structure.structureType == STRUCTURE_STORAGE)})[0];
-    return deposit
+  public static getStorage(probe: Probe): StructureStorage | null {
+    let deposit = probe.room.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_STORAGE) })[0];
+    return deposit instanceof StructureStorage ? deposit : null;
   }
 
   public static getStructureToSupplyByRemoteWorkers(probe: Probe): Structure | null {
@@ -312,6 +312,15 @@ export class GetRoomObjects {
   public static getDroppedResource(pos: RoomPosition): Resource | null {
     let resource = pos.findClosestByPath(FIND_DROPPED_RESOURCES, { filter: (res) => res.amount > 100 });
     return resource;
+  }
+
+  public static getClosestTombstone(pos: RoomPosition): Tombstone | null {
+    let tombstone = pos.findClosestByPath(FIND_TOMBSTONES, {
+      filter: (res) =>
+        (res.store[RESOURCE_ENERGY] == _.sum(res.store) && res.store[RESOURCE_ENERGY] > 100) || //If just energy, don't bother if is less than 100
+        (res.store[RESOURCE_ENERGY] != _.sum(res.store)) //Collect tomstone if it has minerals
+    });
+    return tombstone;
   }
 
   //public static getStorage(pos: RoomPosition): StructureStorage | null{
