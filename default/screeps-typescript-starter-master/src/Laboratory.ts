@@ -7,45 +7,25 @@ import { Helper } from "Helper";
 
 @profile
 export class Laboratory {
-  //cooldown: number;
-  //energy: number;
-  //energyCapacity: number;
-  //mineralAmount: number;
-  //mineralType: _ResourceConstantSansEnergy | null;;
-  //mineralCapacity: number;
-  //hits: number;
-  //hitsMax: number;
-  //id: string;
-  //my: boolean;
-  //owner: Owner;
-  //pos: RoomPosition;
-  //room: Room;
-  //structureType: StructureConstant;
   labs: StructureLab[];
+  labReagentOne: StructureLab;
+  labReagentTwo: StructureLab;
+  labResults: StructureLab[];
+  labForBoosting: StructureLab;
 
   constructor(labs: StructureLab[]) {
-    //this.cooldown = lab.cooldown;
-    //this.energy = lab.energy;
-    //this.energyCapacity = lab.energyCapacity;
-    //this.mineralAmount = lab.mineralAmount;
-    //this.mineralType = lab.mineralType;
-    //this.mineralCapacity = lab.mineralCapacity;
-    //this.hits = lab.hits;
-    //this.hitsMax = lab.hitsMax;
-    //this.id = lab.id;
-    //this.my = lab.my;
-    //this.owner = lab.owner;
-    //this.pos = lab.pos;
-    //this.room = lab.room;
-    //this.structureType = lab.structureType;
     this.labs = labs;
+    this.labReagentOne = labs[0];
+    this.labReagentTwo = labs[1];
+    this.labResults = labs.slice(2);
+    this.labForBoosting = labs[labs.length - 1];
   }
 
-  getLaboratoryJob(tradeHub: TradeHub): MerchantTask | null {
+  getLaboratoryJob(tradeHub: TradeHub): ResourceMovementTask | null {
     if (this.labs.length < 3)
       return null;
     let reactionSchedules = Tasks.getReactionSchedules();
-    let currentReactionFromMemory = Helper.getCashedMemory("CurrentReaction", null);
+    let currentReactionFromMemory = Helper.getCashedMemory("CurrentReaction-" + tradeHub.room.name, null);
     if (currentReactionFromMemory) {
       let currentReaction = reactionSchedules.filter(a => a.resourceType == currentReactionFromMemory)[0]
       if (currentReaction) {
@@ -53,46 +33,51 @@ export class Laboratory {
         if (amoutToProduce > 0) {
           let reagent0 = REAGENTS[currentReaction.resourceType]["0"];
           let reagent1 = REAGENTS[currentReaction.resourceType]["1"];
-          if (tradeHub.getResourceAmountFromTerminal(reagent0) + this.getMineralAmountFromLab(this.labs[0], reagent0) > 50
-            && tradeHub.getResourceAmountFromTerminal(reagent1) + this.getMineralAmountFromLab(this.labs[1], reagent1) > 50) {
+          if (tradeHub.getResourceAmountFromTerminal(reagent0) + this.getMineralAmountFromLab(this.labReagentOne, reagent0) > 50
+            && tradeHub.getResourceAmountFromTerminal(reagent1) + this.getMineralAmountFromLab(this.labReagentTwo, reagent1) > 50) {
             reactionSchedules = []
             reactionSchedules.push(currentReaction)//This current reaction is still ongoing
           }
           else {
-            Helper.setCashedMemory("CurrentReaction", null);//Out of reagent for current reaction, choose another reaction
+            Helper.setCashedMemory("CurrentReaction-" + tradeHub.room.name, null);//Out of reagent for current reaction, choose another reaction
           }
         } else {
-          Helper.setCashedMemory("CurrentReaction", null);//We had enough of this reaction remove from memory
+          Helper.setCashedMemory("CurrentReaction-" + tradeHub.room.name, null);//We had enough of this reaction remove from memory
         }
       }
     }
     for (let i in reactionSchedules) {
-      let amoutToProduce = reactionSchedules[i].threshold - tradeHub.getResourceAmountFromTerminal(reactionSchedules[i].resourceType);
-      if (amoutToProduce > 0) {
-        amoutToProduce = amoutToProduce > REACTION_BATCH ? REACTION_BATCH : amoutToProduce;//Just do reactions in batches
-        Helper.setCashedMemory("CurrentReaction", reactionSchedules[i].resourceType);
-        let reagent0 = REAGENTS[reactionSchedules[i].resourceType]["0"];
-        let reagent1 = REAGENTS[reactionSchedules[i].resourceType]["1"];
-        let minReagentRemaining = tradeHub.getResourceAmountFromTerminal(reagent0) < tradeHub.getResourceAmountFromTerminal(reagent1) ? tradeHub.getResourceAmountFromTerminal(reagent0) : tradeHub.getResourceAmountFromTerminal(reagent1)
-        amoutToProduce = minReagentRemaining < amoutToProduce ? minReagentRemaining : amoutToProduce;//Terminal almost empty, do reaction with what is left.
-        let merchantTask: MerchantTask | null;
-        merchantTask = this.getMerchantTaskPerLab(this.labs[0], reagent0, amoutToProduce - this.getMineralAmountFromLab(this.labs[2], reactionSchedules[i].resourceType))
-        if (merchantTask) {
-          return merchantTask;
-        } else {
-          merchantTask = this.getMerchantTaskPerLab(this.labs[1], reagent1, amoutToProduce - this.getMineralAmountFromLab(this.labs[2], reactionSchedules[i].resourceType))
+      for (let j in this.labResults) {
+        let amoutToProduce = reactionSchedules[i].threshold - tradeHub.getResourceAmountFromTerminal(reactionSchedules[i].resourceType);
+        if (amoutToProduce > 0) {
+          amoutToProduce = amoutToProduce > REACTION_BATCH ? REACTION_BATCH : amoutToProduce;//Just do reactions in batches
+          Helper.setCashedMemory("CurrentReaction-" + tradeHub.room.name, reactionSchedules[i].resourceType);
+          let reagent0 = REAGENTS[reactionSchedules[i].resourceType]["0"];
+          let reagent1 = REAGENTS[reactionSchedules[i].resourceType]["1"];
+          let minReagentRemaining = tradeHub.getResourceAmountFromTerminal(reagent0) < tradeHub.getResourceAmountFromTerminal(reagent1) ? tradeHub.getResourceAmountFromTerminal(reagent0) : tradeHub.getResourceAmountFromTerminal(reagent1)
+          amoutToProduce = minReagentRemaining < amoutToProduce ? minReagentRemaining : amoutToProduce;//Terminal almost empty, do reaction with what is left.
+          let merchantTask: ResourceMovementTask | null;
+          merchantTask = this.getMerchantTaskPerLab(this.labReagentOne, reagent0, amoutToProduce - this.getMineralAmountFromLab(this.labResults[j], reactionSchedules[i].resourceType), tradeHub.terminal)
           if (merchantTask) {
             return merchantTask;
           } else {
-            this.labs[2].runReaction(this.labs[0], this.labs[1]);
-            if (this.labs[2].mineralAmount >= THRESHOLD_LAB_MIN_REFILL //Remove minerals after a while from resulting lab, also remove all if we want to schedule something else in
-              || (this.labs[2].mineralType != null && this.labs[2].mineralType != reactionSchedules[i].resourceType)) {
-              return {
-                remove: true,
-                lab: this.labs[2]
-              }
+            merchantTask = this.getMerchantTaskPerLab(this.labReagentTwo, reagent1, amoutToProduce - this.getMineralAmountFromLab(this.labResults[j], reactionSchedules[i].resourceType), tradeHub.terminal)
+            if (merchantTask) {
+              return merchantTask;
             } else {
-              return null;
+              this.labResults[j].runReaction(this.labReagentOne, this.labReagentTwo);
+              if (this.labResults[j].mineralAmount >= THRESHOLD_LAB_MIN_REFILL //Remove minerals after a while from resulting lab, also remove all if we want to schedule something else in
+                || (this.labResults[j].mineralType != null && this.labResults[j].mineralType != reactionSchedules[i].resourceType)) {
+                return {
+                  amount: this.labResults[j].mineralAmount,
+                  mineralType: this.labResults[j].mineralType!,
+                  fromId: this.labResults[j].id,
+                  toId: tradeHub.terminal.id,
+                  pickedUp: false
+                }
+              } else {
+                return null;
+              }
             }
           }
         }
@@ -101,19 +86,23 @@ export class Laboratory {
     return null;
   }
 
-  getMerchantTaskPerLab(lab: StructureLab, mineral: ResourceConstant, amount: number): MerchantTask | null {
+  getMerchantTaskPerLab(lab: StructureLab, mineral: ResourceConstant, amount: number, terminal: StructureTerminal): ResourceMovementTask | null {
     let almostFinished = amount < THRESHOLD_LAB_MIN_REFILL;
     if (lab.mineralType != mineral && lab.mineralType != null) {
       return {
-        remove: true,
-        lab: lab
+        amount: lab.mineralAmount,
+        mineralType: lab.mineralType,
+        fromId: lab.id,
+        toId: terminal.id,
+        pickedUp: false
       }
     } else if (lab.mineralAmount + (almostFinished ? 0 : THRESHOLD_LAB_MIN_REFILL) < amount) {//Just added a bit of threashold so probe will not go back and fort with 5 minerals in its hands
-      return {//Also cancel the threashold if we are about to finish the current reaction 
-        add: true,
+      return {//Also cancel the threashold if we are about to finish the current reaction
+        amount: (almostFinished ? THRESHOLD_LAB_MIN_REFILL : amount - lab.mineralAmount),//If almost finished just add plenty more minerals.
         mineralType: mineral,
-        amount: almostFinished ? THRESHOLD_LAB_MIN_REFILL : amount - lab.mineralAmount,//If almost finished just add plenty more minerals.
-        lab: lab
+        fromId: terminal.id,
+        toId: lab.id,
+        pickedUp: false
       }
     }
     else {

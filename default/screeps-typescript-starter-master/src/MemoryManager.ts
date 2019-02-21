@@ -3,23 +3,6 @@ import { Helper } from "Helper";
 import { profile } from "./Profiler";
 import { GetRoomObjects } from "GetRoomObjects";
 
-export const enum CreepRoles {
-  ROLE_UNASSIGNED = 0,
-  ROLE_ALL,
-  ROLE_BUILDER,
-  ROLE_MINER,
-  ROLE_MINEHAULER,
-  ROLE_HEALER,
-  ROLE_FIGHTER,
-  ROLE_RANGER,
-  ROLE_CLAIMER,
-  ROLE_REMOTEMINER,
-  ROLE_REMOTEMINEHAULER,
-  ROLE_CUSTOMCONTROL,
-  ROLE_UPGRADER,
-  ROLE_UPGRADETRANSPORT
-}
-
 @profile
 export class MemoryManager implements IMemoryManager {
   private static rooms: { [name: string]: RoomMemory };

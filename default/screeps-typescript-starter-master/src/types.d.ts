@@ -41,14 +41,7 @@ interface ResourceMovementTask {
   mineralType: ResourceConstant;
   fromId: string;
   toId: string;
-}
-
-interface MerchantTask {
-  remove?: boolean;
-  add?: boolean;
-  mineralType?: ResourceConstant;
-  amount?: number;
-  lab: StructureLab;
+  pickedUp: boolean
 }
 
 // `global` extension samples

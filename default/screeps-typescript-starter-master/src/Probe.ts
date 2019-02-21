@@ -12,12 +12,12 @@ export class Probe {
   hitsMax: number;					// |
   id: string;							// |
   memory: CreepMemory;				// | See the ICreepMemory interface for structure
-  // my: boolean;						// |
+  my: boolean;						// |
   name: string;						// |
-  // owner: Owner; 						// |
+  owner: Owner; 						// |
   pos: RoomPosition;					// |
   //ref: string;						// |
-  //roleName: string;					// |
+  roleName: string;					// |
   room: Room;							// |
   saying: string;						// |
   spawning: boolean;					// |
@@ -25,8 +25,6 @@ export class Probe {
   //lifetime: number;
   actionLog: { [actionName: string]: boolean }; // Tracks the actions that a creep has completed this tick
   blockMovement: boolean; 			// Whether the zerg is allowed to move or not
-  // settings: any;					// Adjustable settings object, can vary across roles
-  //private _task: Task | null; 		// Cached Task object that is instantiated once per tick and on change
 
   constructor(creep: Creep) {
     this.creep = creep;
@@ -38,12 +36,12 @@ export class Probe {
     this.hitsMax = creep.hitsMax;
     this.id = creep.id;
     this.memory = creep.memory;
-    // this.my = creep.my;
+    this.my = creep.my;
     this.name = creep.name;
-    // this.owner = creep.owner;
+    this.owner = creep.owner;
     this.pos = creep.pos;
     //this.ref = creep.ref;
-    //this.roleName = creep.memory.role;
+    this.roleName = creep.memory.role;
     this.room = creep.room;
     this.saying = creep.saying;
     this.spawning = creep.spawning;
@@ -51,8 +49,6 @@ export class Probe {
     //this.lifetime = this.getBodyparts(CLAIM) > 0 ? CREEP_CLAIM_LIFE_TIME : CREEP_LIFE_TIME;
     this.actionLog = {};
     this.blockMovement = false;
-    // this.settings = {};
-    //Game.zerg[this.name] = this; // register global reference
   }
 
   build(structure: ConstructionSite) {
@@ -309,6 +305,19 @@ export class Probe {
       }
     }
     this.memory.targetId = controller.id;
+    return result;
+  }
+
+  boost(lab: StructureLab, bodyPartsCount?: number) {
+    let result = lab.boostCreep(this.creep, bodyPartsCount);
+    if (result == ERR_NOT_IN_RANGE) {
+      if (this.memory.useCashedPath) {
+        this.goToCashed(lab.pos)
+      } else {
+        this.goTo(lab.pos);
+      }
+    }
+    this.memory.targetId = lab.id;
     return result;
   }
 

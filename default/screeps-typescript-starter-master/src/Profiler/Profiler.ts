@@ -45,7 +45,8 @@ export function init(): Profiler {
     },
 
     help() {
-      return "Profiler.start() - Starts the profiler\n" +
+      return "Profiler.clear() - Clear the profiler\n" +
+        "Profiler.start() - Starts the profiler\n" +
         "Profiler.stop() - Stops/Pauses the profiler\n" +
         "Profiler.status() - Returns whether is profiler is currently running or not\n" +
         "Profiler.output() - Pretty-prints the collected profiler data to the console\n" +

@@ -1,7 +1,7 @@
 import { Probe } from "Probe";
 import { Tasks } from "Tasks";
 import { GetRoomObjects } from "GetRoomObjects";
-import { MY_SIGNATURE, TERMINAL_MIN_ENERGY, TERMINAL_MAX_ENERGY, TERMINAL_MIN_MINERAL, TERMINAL_MAX_MINERAL } from "Constants";
+import { MY_SIGNATURE, TERMINAL_MIN_ENERGY, TERMINAL_MAX_ENERGY, TERMINAL_MIN_MINERAL, TERMINAL_MAX_MINERAL, FlagName } from "Constants";
 import { profile } from "./Profiler";
 import { TradeHub } from "TradeHub";
 import { Laboratory } from "Laboratory";
@@ -187,7 +187,7 @@ export class ProbeLogic {
       }
       else {
         let deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, true, true, 200, false);
-        if (!Game.flags["WAR"] && !deposit) {
+        if (!Game.flags[FlagName.WAR] && !deposit) {
           deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, false, true, 200, false);//If at war, pick up from storage as well
         } 
         if (deposit) {
@@ -492,10 +492,7 @@ export class ProbeLogic {
   }
 
   public static armyAttackerLogic(probe: Probe): void {
-    var flagToAttachFrom = Game.flags["WAR"];
-    if (!flagToAttachFrom) {
-      flagToAttachFrom = Game.flags["WAR Over"];//This flag is used just here, it is not used for reproduction
-    }
+    var flagToAttachFrom = Game.flags[FlagName.WAR];
     if (!flagToAttachFrom)
       return;
 
@@ -537,10 +534,7 @@ export class ProbeLogic {
   }
 
   public static armyHealerLogic(probe: Probe): void {
-    var flagToAttachFrom = Game.flags["WAR"];
-    if (!flagToAttachFrom) {
-      flagToAttachFrom = Game.flags["WAR Over"];//This flag is used just here, it is not used for reproduction
-    }
+    var flagToAttachFrom = Game.flags[FlagName.WAR];
     if (!flagToAttachFrom)
       return;
 
@@ -579,45 +573,49 @@ export class ProbeLogic {
     }
   }
 
-  public static merchantLogic(probe: Probe, tradeHub: TradeHub, laboratory: Laboratory): void {
+  public static merchantLogic(probe: Probe, tradeHub: TradeHub, laboratory: Laboratory | null): void {
     let storage = GetRoomObjects.getStorage(probe);
     if (!storage || !tradeHub)
       return;
-    let merchantTask = laboratory.getLaboratoryJob(tradeHub);
-    if (merchantTask) {
-      if (merchantTask.add && merchantTask.mineralType) {
-        if (_.sum(probe.carry) != 0 && probe.carry[merchantTask.mineralType]! != _.sum(probe.carry)) {
-          let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);
-          if (terminal) {
-            probe.transferAll(terminal);//Start clean before moving minerals in labs
-          }
+
+    //TODO: External stuff can cause the poor merchant to get stuck on a task
+    let resourceMovementTask: ResourceMovementTask | undefined | null = probe.memory.resourceMovementTask;
+
+    if (!resourceMovementTask && laboratory) {
+      resourceMovementTask = laboratory.getLaboratoryJob(tradeHub)
+    }
+    if (!resourceMovementTask) {
+      resourceMovementTask = probe.memory.resourceMovementTask ? probe.memory.resourceMovementTask : this.getResourceMovementTask(probe);
+    }
+
+    if (resourceMovementTask) {
+      probe.memory.resourceMovementTask = resourceMovementTask;
+      let structureFrom: StructureStorage | StructureTerminal | StructureLab | null = Game.getObjectById(resourceMovementTask.fromId);
+      let structureTo: StructureStorage | StructureTerminal | StructureLab | null = Game.getObjectById(resourceMovementTask.toId);
+      if (structureFrom && structureTo && structureFrom instanceof Structure && structureTo instanceof Structure) {
+        if (_.sum(probe.carry) > 0 && !probe.memory.resourceMovementTask.pickedUp) {//If we didn't pick up material from task but we have something, then empty in storage
+          probe.transferAll(storage);
         }
-        else {
-          if (probe.carry[merchantTask.mineralType]! > 0) {
-            probe.transfer(merchantTask.lab, merchantTask.mineralType, merchantTask.amount)
+        else if (!probe.memory.resourceMovementTask.pickedUp) {//After we cleaned up we are ready to start the task
+          let amountFrom: number;
+          if (structureFrom instanceof StructureLab) {
+            amountFrom = structureFrom.mineralAmount;
           } else {
-            let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);
-            if (terminal) {
-              let a = terminal.store[merchantTask.mineralType] ? terminal.store[merchantTask.mineralType] : 0
-              let b = merchantTask.amount ? merchantTask.amount : 0
-              merchantTask.amount = a! < b ? a : b;//TODO definetely change this
-              probe.withdraw(terminal, merchantTask.mineralType, merchantTask.amount);
-            }
+            amountFrom = structureFrom.store[resourceMovementTask.mineralType] ? structureFrom.store[resourceMovementTask.mineralType]! : 0
+          }
+          let amount = amountFrom < resourceMovementTask.amount ? amountFrom : resourceMovementTask.amount;
+          if (probe.withdraw(structureFrom, resourceMovementTask.mineralType, amount) == OK) {
+            probe.memory.resourceMovementTask.pickedUp = true;
+          }
+        }
+        else {//Now move the resource to complete the task
+          if (probe.transfer(structureTo, resourceMovementTask.mineralType, resourceMovementTask.amount) == OK) {
+            probe.memory.resourceMovementTask = undefined;
           }
         }
       }
-      if (merchantTask.remove) {
-        if (_.sum(probe.carry) === 0) {
-          probe.withdrawAll(merchantTask.lab);
-        }
-        else {
-          let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);
-          if (terminal) {
-            probe.transferAll(terminal);
-          }
-        }
-      }
-    } else {
+    }
+    else {
       let labs = GetRoomObjects.getLabs(probe.room).filter(a => a.energy < a.energyCapacity);//Check for labs that need energy refill
       if (labs.length != 0) {
         if (_.sum(probe.carry) == probe.carry[RESOURCE_ENERGY]) {
@@ -640,25 +638,6 @@ export class ProbeLogic {
           }
         }
       }
-      else {
-        let resourceMovementTask = probe.memory.resourceMovementTask ? probe.memory.resourceMovementTask : this.getResourceMovementTask(probe);
-        if (resourceMovementTask) {
-          probe.memory.resourceMovementTask = resourceMovementTask;
-          let structureFrom = Game.getObjectById(resourceMovementTask.fromId);
-          let structureTo = Game.getObjectById(resourceMovementTask.toId);
-          //console.log(JSON.stringify(resourceMovementTask))
-          if (structureFrom && structureTo && structureFrom instanceof Structure && structureTo instanceof Structure) {
-            if (_.sum(probe.carry) === probe.carryCapacity) {
-              probe.transfer(structureTo, resourceMovementTask.mineralType, resourceMovementTask.amount)
-              probe.memory.resourceMovementTask = undefined;
-            }
-            else {
-              probe.withdraw(structureFrom, resourceMovementTask.mineralType, resourceMovementTask.amount);
-              probe.memory.resourceMovementTask = undefined;
-            }
-          }
-        }
-      }
     }
   }
   
@@ -672,21 +651,22 @@ export class ProbeLogic {
       //console.log(i + " " + terminal.store[<ResourceConstant>i] + " " + storage.store[<ResourceConstant>i]);
       if (i == RESOURCE_ENERGY) {
         if (terminal.store[<ResourceConstant>i]! > TERMINAL_MAX_ENERGY) {
-          return { amount: terminal.store[<ResourceConstant>i]! - TERMINAL_MAX_ENERGY, fromId: terminal.id, toId: storage.id, mineralType: RESOURCE_ENERGY }
+          return { amount: terminal.store[<ResourceConstant>i]! - TERMINAL_MAX_ENERGY, fromId: terminal.id, toId: storage.id, mineralType: <ResourceConstant>i, pickedUp: false }
         }
       } else if (terminal.store[<ResourceConstant>i]! > TERMINAL_MAX_MINERAL) {
-        return { amount: terminal.store[<ResourceConstant>i]! - TERMINAL_MAX_MINERAL, fromId: terminal.id, toId: storage.id, mineralType: RESOURCE_ENERGY }
+        return { amount: terminal.store[<ResourceConstant>i]! - TERMINAL_MAX_MINERAL, fromId: terminal.id, toId: storage.id, mineralType: <ResourceConstant>i, pickedUp: false }
       }
     }
     //console.log("--")
     for (let i in storage.store) {
       //console.log(i + " " + terminal.store[<ResourceConstant>i] + " " + storage.store[<ResourceConstant>i]);
+      let resTerminal = terminal.store[<ResourceConstant>i] ? terminal.store[<ResourceConstant>i]! : 0;
       if (i == RESOURCE_ENERGY) {
-        if (terminal.store[<ResourceConstant>i]! < TERMINAL_MIN_ENERGY) {
-          return { amount: TERMINAL_MIN_ENERGY - (terminal.store[<ResourceConstant>i] ? terminal.store[<ResourceConstant>i]! : 0), fromId: storage.id, toId: terminal.id, mineralType: RESOURCE_ENERGY }
+        if (resTerminal < TERMINAL_MIN_ENERGY && storage.store[RESOURCE_ENERGY] > 0) {
+          return { amount: TERMINAL_MIN_ENERGY - resTerminal, fromId: storage.id, toId: terminal.id, mineralType: <ResourceConstant>i, pickedUp: false }
         }
-      } else if (terminal.store[<ResourceConstant>i]! < TERMINAL_MIN_MINERAL) {
-        return { amount: TERMINAL_MIN_MINERAL - (terminal.store[<ResourceConstant>i] ? terminal.store[<ResourceConstant>i]! : 0), fromId: storage.id, toId: terminal.id, mineralType: RESOURCE_ENERGY }
+      } else if (resTerminal < TERMINAL_MIN_MINERAL) {
+        return { amount: TERMINAL_MIN_MINERAL - resTerminal, fromId: storage.id, toId: terminal.id, mineralType: <ResourceConstant>i, pickedUp: false }
       }
     }
     return null;

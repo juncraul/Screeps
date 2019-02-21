@@ -9,6 +9,7 @@ import { TradeHub } from "TradeHub";
 import { GetRoomObjects } from "GetRoomObjects";
 import { profile } from "./Profiler";
 import { Laboratory } from "Laboratory";
+import { CreepRole, FlagName } from "Constants";
 
 
 @profile
@@ -18,8 +19,8 @@ export class Mothership {
 
     let myRooms = Tasks.getmyRoomsWithController();
     myRooms.forEach(function (room) {
-      let probeSetupBuilder = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "builder-" + Game.time, { role: "builder", homeName: room.name });
-      let probeSetupRepairer = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "repairer-" + Game.time, { role: "repairer", homeName: room.name });
+      let probeSetupBuilder = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "builder-" + Game.time, { role: CreepRole.BUILDER, homeName: room.name });
+      let probeSetupRepairer = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 3 }, "repairer-" + Game.time, { role: CreepRole.REPAIRER, homeName: room.name });
       let spawns = room.find(FIND_STRUCTURES, { filter: structure => structure.structureType == STRUCTURE_SPAWN })
       let energyCapacityRoom = room.energyCapacityAvailable;
 
@@ -53,10 +54,10 @@ export class Mothership {
         else if (Mothership.spawnUpgrader(room)) {
           console.log(room.name + " Spawning Upgrader");
         }
-        else if (Nexus.getProbes("builder", room.name).length < 1 && GetRoomObjects.getConstructionSitesFromRoom(room).length > 0) {
+        else if (Nexus.getProbes(CreepRole.BUILDER, room.name).length < 1 && GetRoomObjects.getConstructionSitesFromRoom(room).length > 0) {
           Nexus.spawnCreep(probeSetupBuilder, structureSpawn, energyCapacityRoom);
         }
-        else if (Nexus.getProbes("repairer", room.name).length < 1 && GetRoomObjects.getClosestStructureToRepairByPath(structureSpawn.pos, 0.7) != null) {
+        else if (Nexus.getProbes(CreepRole.REPAIRER, room.name).length < 1 && GetRoomObjects.getClosestStructureToRepairByPath(structureSpawn.pos, 0.7) != null) {
           Nexus.spawnCreep(probeSetupRepairer, structureSpawn, energyCapacityRoom);
         }
         else if (Mothership.spawnSoldier(room, roomsToHarvest)) {
@@ -102,51 +103,51 @@ export class Mothership {
     let allProbes = Nexus.getProbes();
     allProbes.forEach(function (probe) {
       switch (probe.memory.role) {
-        case "harvester":
+        case CreepRole.HARVESTER:
           ProbeLogic.harvesterLogic(probe);
           break;
-        case "upgrader":
+        case CreepRole.UPGRADER:
           ProbeLogic.upgraderLogic(probe);
           break;
-        case "builder":
+        case CreepRole.BUILDER:
           ProbeLogic.builderLogic(probe);
           break;
-        case "carrier":
+        case CreepRole.CARRIER:
           ProbeLogic.carrierLogic(probe);
           break;
-        case "repairer":
+        case CreepRole.REPAIRER:
           ProbeLogic.repairerLogic(probe);
           break;
-        case "longDistanceHarvester":
+        case CreepRole.LONG_DISTANCE_HARVESTER:
           ProbeLogic.longDistanceHarvesterLogic(probe);
           break;
-        case "longDistanceCarrier":
+        case CreepRole.LONG_DISTANCE_CARRIER:
           ProbeLogic.longDistanceCarrierLogic(probe);
           break;
-        case "claimer":
+        case CreepRole.CLAIMER:
           ProbeLogic.claimerLogic(probe);
           break;
-        case "soldier":
+        case CreepRole.SOLDIER:
           ProbeLogic.soldierLogic(probe);
           break;
-        case "longDistanceBuilder":
+        case CreepRole.LONG_DISTANCE_BUILDER:
           ProbeLogic.longDistanceBuilderLogic(probe);
           break;
-        case "armyAttacker":
+        case CreepRole.ARMY_ATTCKER:
           ProbeLogic.armyAttackerLogic(probe);
           break;
-        case "armyHealer":
+        case CreepRole.ARMY_HEALER:
           ProbeLogic.armyHealerLogic(probe);
           break;
-        case "decoy":
+        case CreepRole.DECOY:
           ProbeLogic.decoyLogic(probe);
           break;
-        case "merchant":
+        case CreepRole.MERCHANT:
           let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);//TODO: should only create one tradehub
           let labs = GetRoomObjects.getLabs(probe.room);
           if (terminal) {
             let tradeHub = new TradeHub(terminal);
-            let laboratory = new Laboratory(labs);
+            let laboratory = labs.length >= 3 ? new Laboratory(labs) : null;
             ProbeLogic.merchantLogic(probe, tradeHub, laboratory);
           }
           break;
@@ -212,14 +213,14 @@ export class Mothership {
   
   private static spawnHarvester(roomToSpawnFrom: Room): boolean {
     let probeSetupHarvester: ProbeSetup;
-    let probeSetupHarvesterOne = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 1 }, "harvester-" + Game.time, { role: "harvester", homeName: roomToSpawnFrom.name });
-    let probeSetupHarvesterTwo = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 3 }, "harvester-" + Game.time, { role: "harvester", homeName: roomToSpawnFrom.name });
-    let probeSetupHarvesterThree = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [MOVE, MOVE], sizeLimit: 5 }, "harvester-" + Game.time, { role: "harvester", homeName: roomToSpawnFrom.name });
-    let probeSetupHarvesterFour = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [MOVE, MOVE], sizeLimit: 5 }, "harvester-" + Game.time, { role: "harvester", homeName: roomToSpawnFrom.name });
-    let probeSetupHarvesterFive = new ProbeSetup({ ordered: true, pattern: [WORK, WORK, MOVE], sizeLimit: 15 }, "harvester-" + Game.time, { role: "harvester", homeName: roomToSpawnFrom.name, harvestCooldownXTicks: 1 });
-    let harvesters = Nexus.getProbes("harvester", roomToSpawnFrom.name);
-    let carriers = Nexus.getProbes("carrier", roomToSpawnFrom.name);
-    let longDistanceHarvesters = Nexus.getProbes("longDistanceHarvester", roomToSpawnFrom.name, true);
+    let probeSetupHarvesterOne = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 1 }, "harvester-" + Game.time, { role: CreepRole.HARVESTER, homeName: roomToSpawnFrom.name });
+    let probeSetupHarvesterTwo = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 3 }, "harvester-" + Game.time, { role: CreepRole.HARVESTER, homeName: roomToSpawnFrom.name });
+    let probeSetupHarvesterThree = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [MOVE, MOVE], sizeLimit: 5 }, "harvester-" + Game.time, { role: CreepRole.HARVESTER, homeName: roomToSpawnFrom.name });
+    let probeSetupHarvesterFour = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [MOVE, MOVE], sizeLimit: 5 }, "harvester-" + Game.time, { role: CreepRole.HARVESTER, homeName: roomToSpawnFrom.name });
+    let probeSetupHarvesterFive = new ProbeSetup({ ordered: true, pattern: [WORK, WORK, MOVE], sizeLimit: 15 }, "harvester-" + Game.time, { role: CreepRole.HARVESTER, homeName: roomToSpawnFrom.name, harvestCooldownXTicks: 1 });
+    let harvesters = Nexus.getProbes(CreepRole.HARVESTER, roomToSpawnFrom.name);
+    let carriers = Nexus.getProbes(CreepRole.CARRIER, roomToSpawnFrom.name);
+    let longDistanceHarvesters = Nexus.getProbes(CreepRole.LONG_DISTANCE_HARVESTER, roomToSpawnFrom.name, true);
     let harvestersAboutToDie = _.filter(harvesters, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
     let mineral = GetRoomObjects.getAvailableMineral(roomToSpawnFrom);
     let sources = roomToSpawnFrom.find(FIND_SOURCES).length + (mineral ? 1 : 0);
@@ -301,12 +302,12 @@ export class Mothership {
 
   private static spawnCarrier(roomToSpawnFrom: Room): boolean {
     let probeSetupCarrier: ProbeSetup;
-    let probeSetupCarrierOne = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 1 }, "carrier-" + Game.time, { role: "carrier", homeName: roomToSpawnFrom.name });
-    let probeSetupCarrierTwo = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 2 }, "carrier-" + Game.time, { role: "carrier", homeName: roomToSpawnFrom.name });
-    let probeSetupCarrierThree = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 5 }, "carrier-" + Game.time, { role: "carrier", homeName: roomToSpawnFrom.name });
-    let probeSetupCarrierFour = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 10 }, "carrier-" + Game.time, { role: "carrier", homeName: roomToSpawnFrom.name });
-    let probeSetupCarrierElite = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 17 }, "carrier-" + Game.time, { role: "carrier", homeName: roomToSpawnFrom.name });
-    let carriers = Nexus.getProbes("carrier", roomToSpawnFrom.name);
+    let probeSetupCarrierOne = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 1 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name });
+    let probeSetupCarrierTwo = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 2 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name });
+    let probeSetupCarrierThree = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 5 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name });
+    let probeSetupCarrierFour = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 10 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name });
+    let probeSetupCarrierElite = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 17 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name });
+    let carriers = Nexus.getProbes(CreepRole.CARRIER, roomToSpawnFrom.name);
     let carriersAboutToDie = _.filter(carriers, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
     let controller = GetRoomObjects.getController(roomToSpawnFrom);
     let energyToUse: number;
@@ -370,11 +371,11 @@ export class Mothership {
 
   private static spawnUpgrader(roomToSpawnFrom: Room): boolean {
     let probeSetupUpgrader: ProbeSetup;
-    let probeSetupUpgraderOne = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 1 }, "upgrader-" + Game.time, { role: "upgrader", homeName: roomToSpawnFrom.name });
-    let probeSetupUpgraderTwo = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 3 }, "upgrader-" + Game.time, { role: "upgrader", homeName: roomToSpawnFrom.name });
-    let probeSetupUpgraderThree = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 5 }, "upgrader-" + Game.time, { role: "upgrader", homeName: roomToSpawnFrom.name });
-    let probeSetupUpgraderElite = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, CARRY, MOVE, MOVE, MOVE], sizeLimit: 10 }, "upgrader-" + Game.time, { role: "upgrader", homeName: roomToSpawnFrom.name });
-    let upgraders = Nexus.getProbes("upgrader", roomToSpawnFrom.name);
+    let probeSetupUpgraderOne = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 1 }, "upgrader-" + Game.time, { role: CreepRole.UPGRADER, homeName: roomToSpawnFrom.name });
+    let probeSetupUpgraderTwo = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 3 }, "upgrader-" + Game.time, { role: CreepRole.UPGRADER, homeName: roomToSpawnFrom.name });
+    let probeSetupUpgraderThree = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, MOVE, MOVE], sizeLimit: 5 }, "upgrader-" + Game.time, { role: CreepRole.UPGRADER, homeName: roomToSpawnFrom.name });
+    let probeSetupUpgraderElite = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [CARRY, CARRY, MOVE, MOVE, MOVE], sizeLimit: 10 }, "upgrader-" + Game.time, { role: CreepRole.UPGRADER, homeName: roomToSpawnFrom.name });
+    let upgraders = Nexus.getProbes(CreepRole.UPGRADER, roomToSpawnFrom.name);
     let upgradersAboutToDie = _.filter(upgraders, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
     let controller = GetRoomObjects.getController(roomToSpawnFrom);
     let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(upgraders, WORK);
@@ -459,9 +460,9 @@ export class Mothership {
       let roomConnections = Tasks.getRoomConnections(roomToSpawnFrom);
       if (!roomConnections.includes(roomsToHarvest[i]))
         continue;
-      let probeSetupLongDistanceHarvester = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [MOVE, MOVE, MOVE], proportionalPrefixSuffix: false, sizeLimit: 5 }, "longDistanceHarvester-" + roomsToHarvest[i] + "-" + Game.time, { role: "longDistanceHarvester", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
-      let probeSetupLongDistanceHarvesterElite = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [MOVE, MOVE, MOVE, MOVE, MOVE], proportionalPrefixSuffix: false, sizeLimit: 5 }, "longDistanceHarvester-" + roomsToHarvest[i] + "-" + Game.time, { role: "longDistanceHarvester", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
-      let harvesters = Nexus.getProbes("longDistanceHarvester", roomsToHarvest[i], true);
+      let probeSetupLongDistanceHarvester = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [MOVE, MOVE, MOVE], proportionalPrefixSuffix: false, sizeLimit: 5 }, "longDistanceHarvester-" + roomsToHarvest[i] + "-" + Game.time, { role: CreepRole.LONG_DISTANCE_HARVESTER, remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
+      let probeSetupLongDistanceHarvesterElite = new ProbeSetup({ ordered: true, pattern: [WORK], suffix: [MOVE, MOVE, MOVE, MOVE, MOVE], proportionalPrefixSuffix: false, sizeLimit: 5 }, "longDistanceHarvester-" + roomsToHarvest[i] + "-" + Game.time, { role: CreepRole.LONG_DISTANCE_HARVESTER, remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
+      let harvesters = Nexus.getProbes(CreepRole.LONG_DISTANCE_HARVESTER, roomsToHarvest[i], true);
       let roomToHarvest = Game.rooms[roomsToHarvest[i]];
       let sources = roomToHarvest != null ? roomToHarvest.find(FIND_SOURCES).length : 1;
       let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(harvesters, WORK);
@@ -516,8 +517,8 @@ export class Mothership {
         continue;
       let bodySetup = { ordered: true, pattern: [CARRY, CARRY, MOVE], sizeLimit: 5 };
       let bodySetupMedium = { ordered: true, pattern: [CARRY, CARRY, MOVE], sizeLimit: 8 };
-      let probeSetupLongDistanceCarrier = new ProbeSetup(bodySetup, "longDistanceCarrier-" + roomsToHarvest[i] + "-" + Game.time, { role: "longDistanceCarrier", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name, useCashedPath: true });
-      let carriers = Nexus.getProbes("longDistanceCarrier", roomsToHarvest[i], true);
+      let probeSetupLongDistanceCarrier = new ProbeSetup(bodySetup, "longDistanceCarrier-" + roomsToHarvest[i] + "-" + Game.time, { role: CreepRole.LONG_DISTANCE_CARRIER, remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name, useCashedPath: true });
+      let carriers = Nexus.getProbes(CreepRole.LONG_DISTANCE_CARRIER, roomsToHarvest[i], true);
       let roomToHarvest = Game.rooms[roomsToHarvest[i]];
       let containers = roomToHarvest != null ? roomToHarvest.find(FIND_STRUCTURES, { filter: (structure) => structure.structureType == STRUCTURE_CONTAINER }).length : 0;
       let controller = GetRoomObjects.getController(roomToSpawnFrom);
@@ -567,8 +568,8 @@ export class Mothership {
         continue;
       if (!roomConnections.includes(roomsToHarvest[i]))
         continue;
-      let probeSetupLongDistanceBuilder = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 5 }, "longDistanceBuilder-" + roomsToHarvest[i] + "-" + Game.time, { role: "longDistanceBuilder", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
-      let builders = Nexus.getProbes("longDistanceBuilder", roomsToHarvest[i], true);
+      let probeSetupLongDistanceBuilder = new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 5 }, "longDistanceBuilder-" + roomsToHarvest[i] + "-" + Game.time, { role: CreepRole.LONG_DISTANCE_BUILDER, remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
+      let builders = Nexus.getProbes(CreepRole.LONG_DISTANCE_BUILDER, roomsToHarvest[i], true);
       let constructionSites = roomToHarvest.find(FIND_CONSTRUCTION_SITES);
       let constructionPointsInTheRoom = constructionSites.length > 0 ? constructionSites.map(item => item.progressTotal - item.progress).reduce((prev, next) => prev + next) : 0;
       let containers = roomToHarvest.find(FIND_STRUCTURES, { filter: (structure) => structure.structureType == STRUCTURE_CONTAINER && structure.hits < 100000 });
@@ -604,8 +605,8 @@ export class Mothership {
         continue;
       if (!roomConnections.includes(roomsToHarvest[i]))
         continue;
-      let probeSetupClaimer = new ProbeSetup({ ordered: true, pattern: [CLAIM, MOVE], sizeLimit: 4 }, "claimer-" + roomsToHarvest[i] + "-" + Game.time, { role: "claimer", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
-      let claimers = Nexus.getProbes("claimer", roomsToHarvest[i], true);
+      let probeSetupClaimer = new ProbeSetup({ ordered: true, pattern: [CLAIM, MOVE], sizeLimit: 4 }, "claimer-" + roomsToHarvest[i] + "-" + Game.time, { role: CreepRole.CLAIMER, remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
+      let claimers = Nexus.getProbes(CreepRole.CLAIMER, roomsToHarvest[i], true);
       let energyToUse = 650;//1 Claim - 1 Move = 650
       let claimBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(claimers, CLAIM);
       let controller = GetRoomObjects.getController(roomToSpawnFrom);
@@ -659,8 +660,8 @@ export class Mothership {
         continue;
       if (!roomConnections.includes(roomsToHarvest[i]))
         continue;
-      let probeSetupSoldier = new ProbeSetup({ ordered: true, prefix: [TOUGH, TOUGH, TOUGH], pattern: [ATTACK, MOVE], sizeLimit: 3 }, "soldier-" + roomsToHarvest[i] + "-" + Game.time, { role: "soldier", remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
-      let soldiers = Nexus.getProbes("soldier", roomsToHarvest[i], true);
+      let probeSetupSoldier = new ProbeSetup({ ordered: true, prefix: [TOUGH, TOUGH, TOUGH], pattern: [ATTACK, MOVE], sizeLimit: 3 }, "soldier-" + roomsToHarvest[i] + "-" + Game.time, { role: CreepRole.SOLDIER, remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
+      let soldiers = Nexus.getProbes(CreepRole.SOLDIER, roomsToHarvest[i], true);
       let energyToUse = 570;//3 TOUGH - 3 Attack - 6 Move = 570
       let enemyInRoom = GetRoomObjects.getClosestEnemy(roomToHarvest);
 
@@ -674,16 +675,16 @@ export class Mothership {
   }
 
   private static spawnArmyAttacker(roomToSpawnFrom: Room): boolean {
-    let warFlag = Game.flags["WAR"];
+    let warFlag = Game.flags[FlagName.WAR];
     if (!warFlag || (warFlag.secondaryColor != COLOR_RED && warFlag.secondaryColor != COLOR_PURPLE))//RED for full build, PURPLE for limited build
       return false;
-    let armyAttacker = Nexus.getProbes("armyAttacker");
-    let armyHealer = Nexus.getProbes("armyHealer");
+    let armyAttacker = Nexus.getProbes(CreepRole.ARMY_ATTCKER);
+    let armyHealer = Nexus.getProbes(CreepRole.ARMY_HEALER);
     if (warFlag.secondaryColor == COLOR_PURPLE && armyAttacker.length >= 2)
       return false;
     if (armyAttacker.length * 2 > armyHealer.length)
       return false;
-    let probeSetupSoldier = new ProbeSetup({ ordered: true, prefix: [TOUGH, TOUGH, TOUGH], pattern: [RANGED_ATTACK, MOVE], suffix: [MOVE, MOVE], sizeLimit: 3 }, "soldier-" + Game.time, { role: "armyAttacker", homeName: roomToSpawnFrom.name });
+    let probeSetupSoldier = new ProbeSetup({ ordered: true, prefix: [TOUGH, TOUGH, TOUGH], pattern: [RANGED_ATTACK, MOVE], suffix: [MOVE, MOVE], sizeLimit: 3 }, "soldier-" + Game.time, { role: CreepRole.ARMY_ATTCKER, homeName: roomToSpawnFrom.name });
     let energyToUse = 1150;//3 TOUGH - 5 RANGED_ATTACK - 5 Move = 1150
 
     Nexus.spawnCreep(probeSetupSoldier, roomToSpawnFrom, energyToUse);
@@ -692,12 +693,12 @@ export class Mothership {
   }
 
   private static spawnArmyElite(roomToSpawnFrom: Room): boolean {
-    let warFlag = Game.flags["WAR"];
+    let warFlag = Game.flags[FlagName.WAR];
     if (!warFlag || (warFlag.secondaryColor != COLOR_RED && warFlag.secondaryColor != COLOR_PURPLE))//RED for full build, PURPLE for limited build
       return false;
     let controller = GetRoomObjects.getController(roomToSpawnFrom);
-    let armyAttacker = Nexus.getProbes("armyAttacker");
-    let armyHealer = Nexus.getProbes("armyHealer");
+    let armyAttacker = Nexus.getProbes(CreepRole.ARMY_ATTCKER);
+    let armyHealer = Nexus.getProbes(CreepRole.ARMY_HEALER);
     if (warFlag.secondaryColor == COLOR_PURPLE && armyAttacker.length >= 2)
       return false;
     if ((controller && controller.level < 4) || !controller) {
@@ -705,8 +706,8 @@ export class Mothership {
     }
     if (armyAttacker.length > armyHealer.length * 2)
       return false;
-    let probeSetupSoldier = new ProbeSetup({ ordered: true, prefix: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE], pattern: [ATTACK], suffix: [RANGED_ATTACK], sizeLimit: 8 }, "soldier-" + Game.time, { role: "armyAttacker", homeName: roomToSpawnFrom.name });
-    let probeSetupSoldierElite = new ProbeSetup({ ordered: true, prefix: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE], pattern: [ATTACK], suffix: [RANGED_ATTACK], sizeLimit: 10 }, "soldier-" + Game.time, { role: "armyAttacker", homeName: roomToSpawnFrom.name });
+    let probeSetupSoldier = new ProbeSetup({ ordered: true, prefix: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE], pattern: [ATTACK], suffix: [RANGED_ATTACK], sizeLimit: 8 }, "soldier-" + Game.time, { role: CreepRole.ARMY_ATTCKER, homeName: roomToSpawnFrom.name });
+    let probeSetupSoldierElite = new ProbeSetup({ ordered: true, prefix: [MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE, MOVE], pattern: [ATTACK], suffix: [RANGED_ATTACK], sizeLimit: 10 }, "soldier-" + Game.time, { role: CreepRole.ARMY_ATTCKER, homeName: roomToSpawnFrom.name });
     let energyToUse;
     switch (controller.level) {
       case 1:
@@ -729,15 +730,15 @@ export class Mothership {
   }
 
   private static spawnArmyHealer(roomToSpawnFrom: Room): boolean {
-    let warFlag = Game.flags["WAR"];
+    let warFlag = Game.flags[FlagName.WAR];
     if (!warFlag || (warFlag.secondaryColor != COLOR_RED && warFlag.secondaryColor != COLOR_PURPLE))//RED for full build, PURPLE for limited build
       return false;
-    let armyHealer = Nexus.getProbes("armyHealer");
+    let armyHealer = Nexus.getProbes(CreepRole.ARMY_HEALER);
     if (warFlag.secondaryColor == COLOR_PURPLE && armyHealer.length >= 1)
       return false;
-    let probeSetupHealer = new ProbeSetup({ ordered: true, prefix: [TOUGH, TOUGH], pattern: [HEAL, MOVE], suffix: [MOVE, MOVE], sizeLimit: 2 }, "soldier-" + Game.time, { role: "armyHealer", homeName: roomToSpawnFrom.name });
-    let probeSetupHealerFour = new ProbeSetup({ ordered: true, pattern: [MOVE, HEAL], sizeLimit: 5 }, "soldier-" + Game.time, { role: "armyHealer", homeName: roomToSpawnFrom.name });
-    let probeSetupHealerElite = new ProbeSetup({ ordered: true, pattern: [MOVE, HEAL], sizeLimit: 6 }, "soldier-" + Game.time, { role: "armyHealer", homeName: roomToSpawnFrom.name });
+    let probeSetupHealer = new ProbeSetup({ ordered: true, prefix: [TOUGH, TOUGH], pattern: [HEAL, MOVE], suffix: [MOVE, MOVE], sizeLimit: 2 }, "soldier-" + Game.time, { role: CreepRole.ARMY_HEALER, homeName: roomToSpawnFrom.name });
+    let probeSetupHealerFour = new ProbeSetup({ ordered: true, pattern: [MOVE, HEAL], sizeLimit: 5 }, "soldier-" + Game.time, { role: CreepRole.ARMY_HEALER, homeName: roomToSpawnFrom.name });
+    let probeSetupHealerElite = new ProbeSetup({ ordered: true, pattern: [MOVE, HEAL], sizeLimit: 6 }, "soldier-" + Game.time, { role: CreepRole.ARMY_HEALER, homeName: roomToSpawnFrom.name });
     let controller = GetRoomObjects.getController(roomToSpawnFrom);
     if (!controller)
       return false;
@@ -769,8 +770,8 @@ export class Mothership {
     let cannons = Nexus.getCannons(roomToSpawnFrom);
     if (cannons.length != 0)
       return false;
-    let probeSetupSoldier = new ProbeSetup({ ordered: true, pattern: [TOUGH], suffix: [ATTACK, MOVE], sizeLimit: 10 }, "soldier-" + Game.time, { role: "soldier", remote: roomToSpawnFrom.name, homeName: roomToSpawnFrom.name });
-    let soldiers = Nexus.getProbes("soldier", roomToSpawnFrom.name, true);
+    let probeSetupSoldier = new ProbeSetup({ ordered: true, pattern: [TOUGH], suffix: [ATTACK, MOVE], sizeLimit: 10 }, "soldier-" + Game.time, { role: CreepRole.SOLDIER, remote: roomToSpawnFrom.name, homeName: roomToSpawnFrom.name });
+    let soldiers = Nexus.getProbes(CreepRole.SOLDIER, roomToSpawnFrom.name, true);
     let energyToUse = 230;//10 TOUGH - 1 Attack - 1 Move = 230
     let enemyInRoom = GetRoomObjects.getClosestEnemy(roomToSpawnFrom);
 
@@ -783,13 +784,13 @@ export class Mothership {
 
 
   private static spawnDecoy(roomToSpawnFrom: Room): boolean {
-    let decoy = Game.flags["Decoy"];
+    let decoy = Game.flags[FlagName.DECOY];
     if (!decoy)
       return false;
-    let decoySpawner = Game.flags["DecoySpawner"];
+    let decoySpawner = Game.flags[FlagName.DECOY_SPAWNER];
     if (!decoySpawner || decoySpawner.room != roomToSpawnFrom || decoy.secondaryColor != COLOR_RED)
       return false;
-    let probeDecoy = new ProbeSetup({ ordered: true, pattern: [MOVE], sizeLimit: 1 }, "cupidon-" + Game.time, { role: "decoy", remote: roomToSpawnFrom.name, homeName: roomToSpawnFrom.name });
+    let probeDecoy = new ProbeSetup({ ordered: true, pattern: [MOVE], sizeLimit: 1 }, "cupidon-" + Game.time, { role: CreepRole.DECOY, remote: roomToSpawnFrom.name, homeName: roomToSpawnFrom.name });
     let energyToUse = 50;//1 MOVE = 50
 
     Nexus.spawnCreep(probeDecoy, roomToSpawnFrom, energyToUse);
@@ -798,8 +799,8 @@ export class Mothership {
 
   private static spawnMerchant(roomToSpawnFrom: Room): boolean {
     let probeSetupMerchant: ProbeSetup;
-    let probeSetupMerchantSix = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 6 }, "merchant-" + Game.time, { role: "merchant", homeName: roomToSpawnFrom.name });
-    let merchants = Nexus.getProbes("merchant", roomToSpawnFrom.name);
+    let probeSetupMerchantSix = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 6 }, "merchant-" + Game.time, { role: CreepRole.MERCHANT, homeName: roomToSpawnFrom.name });
+    let merchants = Nexus.getProbes(CreepRole.MERCHANT, roomToSpawnFrom.name);
     let merchantsAboutToDie = _.filter(merchants, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
     let controller = GetRoomObjects.getController(roomToSpawnFrom);
     let energyToUse: number;

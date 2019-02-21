@@ -15,7 +15,10 @@ export class TradeHub {
   storeCapacity: number;
   structureType: StructureConstant;
   terminal: StructureTerminal;
-  
+
+  //One time only send resource for rooms in need
+  //Game.getObjectById("5c6884ec6f956a230ba5654c").send(RESOURCE_ENERGY, 10000, "E32N44", "yoyoy");
+
   constructor(terminal: StructureTerminal) {
     this.cooldown = terminal.cooldown;
     this.hits = terminal.hits;
@@ -70,6 +73,9 @@ export class TradeHub {
       )
       if (ordersMarket.length == 0)
         continue;
+      if (this.getResourceAmountFromTerminal(RESOURCE_ENERGY) < ordersMarket[0].price * amountToBuy) {//If terminal has less energy than the transfer cost, go to next order
+        continue;
+      }
       
       if (this.completeOrder(ordersMarket[0], amountToBuy, this.room.name) == OK) {
         return;//One order was complited succesfully we can exit as Terminal will go in cooldown.
@@ -83,15 +89,19 @@ export class TradeHub {
 
   createOrder(type: string, resourceType: MarketResourceConstant, price: number, amount: number) {
     let result = Game.market.createOrder(type, resourceType, price, amount, this.room.name);
-    let storeResult = `Result of the order creation is: ${result} Type:${type} resourceType:${resourceType} price:${price} amount${amount}`;
+    let storeResult = `Time ${Game.time} Result of the order creation is: ${result} Type:${type} resourceType:${resourceType} price:${price} amount${amount}`;
     Memory.market.push(storeResult);
+    if (Memory.market.length > 100)
+      Memory.market.shift()
     console.log(storeResult)
   }
 
   completeOrder(order: Order, amount: number, targetRoom: string): number {
     let result = Game.market.deal(order.id, amount, targetRoom);
-    let storeResult = `Result of the order deal is: ${result} ID:${order.id} TargetRoom:${targetRoom} Amount:${amount} Price:${order.price} Resource:${order.resourceType} TotalPrice: ${TradeHub.getTotalTranCost(amount, order.price, this.room.name, order.roomName!)}`;
+    let storeResult = `Time ${Game.time} Result of the order deal is: ${result} ID:${order.id} TargetRoom:${targetRoom} Amount:${amount} Price:${order.price} Resource:${order.resourceType} TotalPrice: ${TradeHub.getTotalTranCost(amount, order.price, this.room.name, order.roomName!)}`;
     Memory.market.push(storeResult);
+    if (Memory.market.length > 100)
+      Memory.market.shift()
     console.log(storeResult)
     return result;
   }

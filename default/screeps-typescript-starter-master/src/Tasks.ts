@@ -137,13 +137,17 @@ export class Tasks {
     return [
       new ReactionSchedule(RESOURCE_ZYNTHIUM_KEANITE, 1000),
       new ReactionSchedule(RESOURCE_UTRIUM_LEMERGITE, 1000),
+      new ReactionSchedule(RESOURCE_UTRIUM_HYDRIDE, 1000),
       new ReactionSchedule(RESOURCE_GHODIUM, 1000),
       new ReactionSchedule(RESOURCE_GHODIUM_OXIDE, 1000),
       new ReactionSchedule(RESOURCE_GHODIUM_HYDRIDE, 1000),
       new ReactionSchedule(RESOURCE_LEMERGIUM_OXIDE, 2000),
       new ReactionSchedule(RESOURCE_HYDROXIDE, 1000),
       new ReactionSchedule(RESOURCE_LEMERGIUM_ALKALIDE, 2000),
-      new ReactionSchedule(RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE, 5000),
+      new ReactionSchedule(RESOURCE_GHODIUM_ALKALIDE, 1000),
+      new ReactionSchedule(RESOURCE_UTRIUM_ACID, 1000),
+      new ReactionSchedule(RESOURCE_CATALYZED_GHODIUM_ALKALIDE, 2500),
+      new ReactionSchedule(RESOURCE_CATALYZED_LEMERGIUM_ALKALIDE, 2500),
     ];
   }
 
