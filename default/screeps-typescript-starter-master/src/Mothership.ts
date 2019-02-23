@@ -10,25 +10,38 @@ import { GetRoomObjects } from "GetRoomObjects";
 import { profile } from "./Profiler";
 import { Laboratory } from "Laboratory";
 import { CreepRole, FlagName } from "Constants";
+import { Helper } from "Helper";
 
 
 @profile
 export class Mothership {
   static laboratories: { [roomName: string]: Laboratory };
   static tradeHubs: { [roomName: string]: TradeHub };
+  static requestRenewProbeId: { [roomName: string]: string };
+  static renewalSpawn: { [roomName: string]: string };
 
   public static initialize() {
     Mothership.laboratories = {};
     Mothership.tradeHubs = {};
+    Mothership.requestRenewProbeId = {};
+    Mothership.renewalSpawn = {};
     let myRooms = Tasks.getmyRoomsWithController();
     myRooms.forEach(function (room) {
       let labs = GetRoomObjects.getLabs(room);
       let terminal = GetRoomObjects.getTerminalFromRoom(room);
+      let spawn = GetRoomObjects.getSpawn(room);
+      let probeIdForRenawal = Helper.getCashedMemory("RequestRenew-" + room.name, null);
       if (terminal) {
         Mothership.tradeHubs[room.name] = new TradeHub(terminal);
       }
       if (labs.length >= 3 && Mothership.tradeHubs[room.name]) {
         Mothership.laboratories[room.name] = new Laboratory(labs, Mothership.tradeHubs[room.name]);
+      }
+      if (spawn) {
+        Mothership.renewalSpawn[room.name] = spawn.id;
+      }
+      if (probeIdForRenawal) {
+        Mothership.requestRenewProbeId[room.name] = probeIdForRenawal;
       }
     });
   }
@@ -45,6 +58,18 @@ export class Mothership {
 
       spawns.forEach(function (spawn) {
         let structureSpawn = new StructureSpawn(spawn.id);
+
+        if (Mothership.requestRenewProbeId[room.name]) {
+          let creep = Game.getObjectById(Mothership.requestRenewProbeId[room.name])
+          if (creep instanceof Creep) {
+            structureSpawn.renewCreep(creep);
+            if (1450 < creep.ticksToLive!) {
+              delete Mothership.requestRenewProbeId[room.name];
+              Helper.setCashedMemory("RequestRenew-" + room.name, null);
+            }
+          }
+          return;
+        }
 
         if (structureSpawn.spawning || Game.time % 5 < 4)//Only try to spawn every 5th tick
           return;//This is basically continue, but where are in function iteration
@@ -97,6 +122,9 @@ export class Mothership {
         else if (Mothership.spawnMerchant(room)) {
           console.log(room.name + " Spawning merchant.");
         }
+        else if (Mothership.spawnKeeperSlayer(room)) {
+          console.log(room.name + " Spawning keeper slayer.");
+        }
 
       })
 
@@ -120,6 +148,9 @@ export class Mothership {
 
     let allProbes = Nexus.getProbes();
     allProbes.forEach(function (probe) {
+      if (probe.spawning) {
+        return;
+      }
       switch (probe.memory.role) {
         case CreepRole.HARVESTER:
           ProbeLogic.harvesterLogic(probe);
@@ -164,6 +195,9 @@ export class Mothership {
           if (Mothership.tradeHubs[probe.room.name] && Mothership.laboratories[probe.room.name]) {
             ProbeLogic.merchantLogic(probe, Mothership.tradeHubs[probe.room.name], Mothership.laboratories[probe.room.name]);
           }
+          break;
+        case CreepRole.KEEPER_SLAYER:
+          ProbeLogic.keeperSlayerLogic(probe);
           break;
       }
     });
@@ -813,7 +847,7 @@ export class Mothership {
 
   private static spawnMerchant(roomToSpawnFrom: Room): boolean {
     let probeSetupMerchant: ProbeSetup;
-    let probeSetupMerchantSix = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 6 }, "merchant-" + Game.time, { role: CreepRole.MERCHANT, homeName: roomToSpawnFrom.name });
+    let probeSetupMerchantSix = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 8 }, "merchant-" + Game.time, { role: CreepRole.MERCHANT, homeName: roomToSpawnFrom.name });
     let merchants = Nexus.getProbes(CreepRole.MERCHANT, roomToSpawnFrom.name);
     let merchantsAboutToDie = _.filter(merchants, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
     let controller = GetRoomObjects.getController(roomToSpawnFrom);
@@ -832,7 +866,7 @@ export class Mothership {
         return false;
       case 6://2300 Energy avilable
       default://5300 Energy at least
-        energyToUse = 1700//17 Carry; 17 Move
+        energyToUse = 800//8 Carry; 8 Move
         probeSetupMerchant = probeSetupMerchantSix;
         break;
     }
@@ -847,6 +881,38 @@ export class Mothership {
       return true;//Show our intend to spawn this probe when energy will be available
     }
     Nexus.spawnCreep(probeSetupMerchant, roomToSpawnFrom, energyToUse);
+    return true;
+  }
+
+  private static spawnKeeperSlayer(roomToSpawnFrom: Room): boolean {
+    let keeperSlayerFlag = Game.flags[FlagName.KEEPER_SLAYER];
+    if (!keeperSlayerFlag)
+      return false;
+    let keeperSlayerSpawnerFlag = Game.flags[FlagName.KEEPER_SLAYER_SPAWNER];
+    if (!keeperSlayerSpawnerFlag || keeperSlayerSpawnerFlag.room != roomToSpawnFrom || keeperSlayerFlag.secondaryColor != COLOR_RED)
+      return false;
+    let keeperSlayer = Nexus.getProbes(CreepRole.KEEPER_SLAYER, roomToSpawnFrom.name);
+    let keeperSlayerSetup = new ProbeSetup({ ordered: true, prefix: [TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH, TOUGH], pattern: [TOUGH, MOVE, ATTACK], suffix: [HEAL, HEAL, HEAL, HEAL, HEAL], sizeLimit: 7 }, "keeperSlayer-" + Game.time, { role: CreepRole.KEEPER_SLAYER, remote: roomToSpawnFrom.name, homeName: roomToSpawnFrom.name });
+    let controller = GetRoomObjects.getController(roomToSpawnFrom);
+    let energyToUse: number;
+
+    if (!controller || keeperSlayer.length >= 1) {
+      return false;
+    }
+    switch (controller.level) {
+      case 1://300 Energy avilable
+      case 2://550 Energy available
+      case 3://800 Energy available
+      case 4://1300 Energy available
+      case 5://1800 Energy available
+        return false;
+      case 6://2300 Energy avilable
+      default://5300 Energy at least
+        energyToUse = 2300//14 Tough; 7 Move; 7 Attack; 5 Heal
+        break;
+    }
+
+    Nexus.spawnCreep(keeperSlayerSetup, roomToSpawnFrom, energyToUse);
     return true;
   }
 }

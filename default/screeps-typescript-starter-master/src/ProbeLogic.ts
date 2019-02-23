@@ -1,11 +1,12 @@
 import { Probe } from "Probe";
 import { Tasks } from "Tasks";
 import { GetRoomObjects } from "GetRoomObjects";
-import { MY_SIGNATURE, TERMINAL_MIN_ENERGY, TERMINAL_MAX_ENERGY, TERMINAL_MIN_MINERAL, TERMINAL_MAX_MINERAL, BoostActionType, FlagName } from "Constants";
+import { MY_SIGNATURE, TERMINAL_MIN_ENERGY, TERMINAL_MAX_ENERGY, TERMINAL_MIN_MINERAL, TERMINAL_MAX_MINERAL, BOOST_RESOURCES, BOOST_PARTS, BoostActionType, FlagName } from "Constants";
 import { profile } from "./Profiler";
 import { TradeHub } from "TradeHub";
 import { Laboratory } from "Laboratory";
 import { Mothership } from "Mothership";
+import { Helper } from "Helper";
 
 @profile
 export class ProbeLogic {
@@ -496,53 +497,43 @@ export class ProbeLogic {
   }
 
   public static armyAttackerLogic(probe: Probe): void {
-    var flagToAttachFrom = Game.flags[FlagName.WAR];
-    if (!flagToAttachFrom)
+    var flagToAttackFrom = Game.flags[FlagName.WAR];
+    if (!flagToAttackFrom)
       return;
 
-    if (flagToAttachFrom == null) {
-      return;
-    }
-
-    var roomToAttack = flagToAttachFrom.pos;
+    var roomToAttack = flagToAttackFrom.pos;
     if (roomToAttack != null) {
       if (probe.room.name != roomToAttack.roomName) {
         probe.goTo(roomToAttack);
         return;
       }
       else {
-        const targetCreepsFromFlag = flagToAttachFrom.pos.findInRange(FIND_HOSTILE_CREEPS, 1);
-        const targetStructuresFromFlag = flagToAttachFrom.pos.findInRange(FIND_HOSTILE_STRUCTURES, 1);
+        const targetCreepsFromFlag = flagToAttackFrom.pos.findInRange(FIND_HOSTILE_CREEPS, 1);
+        const targetStructuresFromFlag = flagToAttackFrom.pos.findInRange(FIND_HOSTILE_STRUCTURES, 1);
         const targetCreeps = targetCreepsFromFlag.length == 0 ? probe.pos.findClosestByPath(FIND_HOSTILE_CREEPS) : targetCreepsFromFlag[0];
         const targetStructures = targetStructuresFromFlag.length == 0 ? probe.pos.findClosestByPath(FIND_HOSTILE_STRUCTURES) : targetStructuresFromFlag[0];
         if (targetCreeps && targetCreeps.pos.x != 0 && targetCreeps.pos.y != 0 && targetCreeps.pos.x != 49 && targetCreeps.pos.y != 49) {
-          if (probe.attack(targetCreeps) == ERR_NOT_IN_RANGE) {
-            probe.goTo(targetCreeps.pos, '#ff0000');
-          }
-          if (probe.rangedAttack(targetCreeps) == ERR_NOT_IN_RANGE) {
+          if (probe.attack(targetCreeps) == ERR_NOT_IN_RANGE || probe.rangedAttack(targetCreeps) == ERR_NOT_IN_RANGE) {
             probe.goTo(targetCreeps.pos, '#ff0000');
           }
         } else if (targetStructures) {
-          if (probe.attack(targetStructures) == ERR_NOT_IN_RANGE) {//This quite not work, have to analyze it, probes still targeted other creeps
-            probe.goTo(targetStructures.pos, '#ff0000');
-          }
-          if (probe.rangedAttack(targetStructures) == ERR_NOT_IN_RANGE) {
+          if (probe.attack(targetStructures) == ERR_NOT_IN_RANGE || probe.rangedAttack(targetStructures) == ERR_NOT_IN_RANGE) {
             probe.goTo(targetStructures.pos, '#ff0000');
           }
         }
         else {
-          probe.goTo(flagToAttachFrom.pos, '#ff0000');
+          probe.goTo(flagToAttackFrom.pos, '#ff0000');
         }
       }
     }
   }
 
   public static armyHealerLogic(probe: Probe): void {
-    var flagToAttachFrom = Game.flags[FlagName.WAR];
-    if (!flagToAttachFrom)
+    var flagToAttackFrom = Game.flags[FlagName.WAR];
+    if (!flagToAttackFrom)
       return;
 
-    var roomToAttack = flagToAttachFrom.pos;
+    var roomToAttack = flagToAttackFrom.pos;
 
     if (roomToAttack != null) {
       if (probe.room.name != roomToAttack.roomName) {
@@ -559,7 +550,7 @@ export class ProbeLogic {
           }
         }
         else {
-          probe.goTo(flagToAttachFrom.pos, '#00ff00');
+          probe.goTo(flagToAttackFrom.pos, '#00ff00');
         }
       }
     }
@@ -585,11 +576,11 @@ export class ProbeLogic {
     //TODO: External stuff can cause the poor merchant to get stuck on a task
     let resourceMovementTask: ResourceMovementTask | undefined | null = probe.memory.resourceMovementTask;
 
-    if (!resourceMovementTask && laboratory) {
-      resourceMovementTask = laboratory.getLaboratoryJob()
-    }
     if (!resourceMovementTask) {
       resourceMovementTask = probe.memory.resourceMovementTask ? probe.memory.resourceMovementTask : this.getResourceMovementTask(probe);
+    }
+    if (!resourceMovementTask && laboratory) {
+      resourceMovementTask = laboratory.getLaboratoryJob()
     }
 
     if (resourceMovementTask) {
@@ -613,8 +604,11 @@ export class ProbeLogic {
           }
         }
         else {//Now move the resource to complete the task
-          if (probe.transfer(structureTo, resourceMovementTask.mineralType, resourceMovementTask.amount) == OK) {
+          let result = probe.transfer(structureTo, resourceMovementTask.mineralType, resourceMovementTask.amount);
+          if (result == OK) {
             probe.memory.resourceMovementTask = undefined;
+          } if (result == ERR_FULL) {
+            probe.memory.resourceMovementTask = undefined;//Can't move the resource, other type of resource got in the structure
           }
         }
       }
@@ -640,6 +634,51 @@ export class ProbeLogic {
               probe.transferAll(terminal);
             }
           }
+        }
+      }
+    }
+  }
+
+  public static keeperSlayerLogic(probe: Probe) {
+    if (this.goForRenawal(probe, 150) == OK) {
+      return;
+    }
+    if (ProbeLogic.boostCreep(probe, BoostActionType.TOUGH, 14, 1) == OK) {
+      return;
+    } else if (ProbeLogic.boostCreep(probe, BoostActionType.ATTACK, 7, 2) == OK) {
+      return;
+    } else if (ProbeLogic.boostCreep(probe, BoostActionType.MOVE, 2, 1) == OK) {
+      return;
+    }
+
+    var flagToAttackFrom = Game.flags[FlagName.KEEPER_SLAYER];
+    if (!flagToAttackFrom)
+      return;
+
+    var roomToAttack = flagToAttackFrom.pos;
+    if (roomToAttack != null) {
+      if (probe.room.name != roomToAttack.roomName) {
+        probe.goTo(roomToAttack);
+        return;
+      }
+      else {
+        let targetCreepsFromFlag = flagToAttackFrom.pos.findInRange(FIND_HOSTILE_CREEPS, 3);
+        let targetCreeps = targetCreepsFromFlag[0]; //targetCreepsFromFlag.length == 0 ? probe.pos.findClosestByPath(FIND_HOSTILE_CREEPS) : targetCreepsFromFlag[0];
+        let wondedCreep = probe.pos.findClosestByRange(FIND_MY_CREEPS, { filter: function (object) { return object.hits < object.hitsMax } });
+
+        if (targetCreeps && targetCreeps.pos.x != 0 && targetCreeps.pos.y != 0 && targetCreeps.pos.x != 49 && targetCreeps.pos.y != 49) {
+          if (probe.attack(targetCreeps) == ERR_NOT_IN_RANGE || probe.rangedAttack(targetCreeps) == ERR_NOT_IN_RANGE) {
+            probe.goTo(targetCreeps.pos, '#ff0000');
+          }
+        } 
+        else if (wondedCreep && wondedCreep.pos.x != 0 && wondedCreep.pos.y != 0 && wondedCreep.pos.x != 49 && wondedCreep.pos.y != 49) {
+          if (probe.heal(wondedCreep) == ERR_NOT_IN_RANGE) {
+            probe.rangedHeal(wondedCreep)
+            probe.goTo(wondedCreep.pos, '#00ff00');
+          }
+        }
+        else {
+          probe.goTo(flagToAttackFrom.pos, '#ff0000');
         }
       }
     }
@@ -694,20 +733,38 @@ export class ProbeLogic {
     }
   }
 
+  private static goForRenawal(probe: Probe, ticksToLiveThreshold: number): ScreepsReturnCode {
+    if (probe.ticksToLive! > ticksToLiveThreshold) {
+      return ERR_INVALID_TARGET;
+    }
+    if (Mothership.requestRenewProbeId[probe.memory.homeName] && Mothership.requestRenewProbeId[probe.memory.homeName] != probe.id) {
+      return ERR_BUSY;
+    } else if (!Mothership.requestRenewProbeId[probe.memory.homeName]) {
+      Mothership.requestRenewProbeId[probe.memory.homeName] = probe.id;
+      Helper.setCashedMemory("RequestRenew-" + probe.memory.homeName, probe.id);
+    }
+    let spawn = Game.getObjectById(Mothership.renewalSpawn[probe.room.name]);
+    if (spawn instanceof StructureSpawn) {
+      probe.goTo(spawn.pos)
+    }
+    return OK;
+  }
+
   private static boostCreep(probe: Probe, actionToBoost: string, numberOfPartsToBoost: number, tierOfBoost: number): ScreepsReturnCode {
-    if (probe.memory.bodyPartsUpgraded == true)
+    if (numberOfPartsToBoost <= probe.getNumberOfBoostedBodyPart(BOOST_PARTS[BOOST_RESOURCES[actionToBoost][tierOfBoost]]))
       return ERR_FULL;
     let laboratory = Mothership.laboratories[probe.room.name];
     if (!laboratory) {
       return ERR_NOT_FOUND;
     }
-    let boostRequest: BoostRequest = {
-      actionToBoost: actionToBoost,
-      numberOfPartsToBoost: numberOfPartsToBoost,
-      tierOfBoost: tierOfBoost,
-      probeId: probe.id,
-    }
+    
     if (!laboratory.boostRequest) {
+      let boostRequest: BoostRequest = {
+        actionToBoost: actionToBoost,
+        numberOfPartsToBoost: numberOfPartsToBoost,
+        tierOfBoost: tierOfBoost,
+        probeId: probe.id,
+      }
       let result = laboratory.requestBoosting(boostRequest);
       if (result == OK) {
         probe.goTo(laboratory.labForBoosting.pos);

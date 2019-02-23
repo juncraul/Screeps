@@ -170,11 +170,14 @@ export const enum CreepRole {
   LONG_DISTANCE_HARVESTER = "longDistanceHarvester",
   LONG_DISTANCE_CARRIER = "longDistanceCarrier",
   CLAIMER = "claimer",
-  MERCHANT = "merchant"
+  MERCHANT = "merchant",
+  KEEPER_SLAYER = "keeperSlayer"
 }
 
 export const enum FlagName {
   DECOY = "Decoy", //Indicates where decoys should go
   DECOY_SPAWNER = "DecoySpawner", //The base where decoys spawn from
   WAR = "War", //Build War Creeps
+  KEEPER_SLAYER = "KeeperSlayer", //Indicate that we want to build keeper slayer
+  KEEPER_SLAYER_SPAWNER = "KeeperSlayerSpawner" //Indicate from where to build a keeper slayer
 }

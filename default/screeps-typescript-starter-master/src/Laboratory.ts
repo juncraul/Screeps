@@ -31,23 +31,26 @@ export class Laboratory {
   runReaction() {
     for (let i in this.labCompounds) {
       if (this.labCompounds[i].id == this.labForBoosting.id && this.boostRequest && this.boostRequest.mineralUsedForBoost) {
-        let creep = Game.getObjectById(this.boostRequest.probeId);
-        if (creep instanceof Creep) {
-          let probe = new Probe(creep);
-          let bodyPart = BOOST_PARTS[this.boostRequest.mineralUsedForBoost];
-          let alreadyBoostedBodyParts = probe.getNumberOfBoostedBodyPart(bodyPart)
-          if (alreadyBoostedBodyParts < this.boostRequest.numberOfPartsToBoost) {
-            this.labForBoosting.boostCreep(creep, this.boostRequest.numberOfPartsToBoost - alreadyBoostedBodyParts);
+        if (this.boostRequest.mineralUsedForBoost == this.labForBoosting.mineralType) {//Perhaps this if is not needed
+          let creep = Game.getObjectById(this.boostRequest.probeId);
+          if (creep instanceof Creep) {
+            let probe = new Probe(creep);
+            let bodyPart = BOOST_PARTS[this.boostRequest.mineralUsedForBoost];
+            let alreadyBoostedBodyParts = probe.getNumberOfBoostedBodyPart(bodyPart)
+            if (alreadyBoostedBodyParts < this.boostRequest.numberOfPartsToBoost) {
+              this.labForBoosting.boostCreep(creep, this.boostRequest.numberOfPartsToBoost - alreadyBoostedBodyParts);
+            }
+            else {
+              probe.memory.bodyPartsUpgraded = true;
+              this.boostRequest = undefined;
+              Helper.setCashedMemory("BoostRequest-" + this.room.name, null);
+            }
           }
-          else {
-            probe.memory.bodyPartsUpgraded = true;
-            this.boostRequest = undefined;
-            Helper.setCashedMemory("BoostRequest-" + this.room.name, null);
-          }
+          continue;//Don't run reaction for this lab as we have a boost request pending
         }
-        continue;//Don't run reaction for this lab as we have a boost request pending
+      } else {
+        this.labCompounds[i].runReaction(this.labReagentZero, this.labReagentOne);
       }
-      this.labCompounds[i].runReaction(this.labReagentZero, this.labReagentOne);
     }
   }
 
@@ -170,6 +173,7 @@ export class Laboratory {
     newBoostRequest.mineralAmountNeeded = mineralAmountForBoost
     newBoostRequest.mineralUsedForBoost = mineralUsedForBoosting;
     this.boostRequest = newBoostRequest;
+    console.log("New Boost Request: " + JSON.stringify(newBoostRequest))
     Helper.setCashedMemory("BoostRequest-" + this.room.name, newBoostRequest);
     return OK;
   }
