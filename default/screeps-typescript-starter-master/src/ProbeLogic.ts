@@ -1,10 +1,11 @@
 import { Probe } from "Probe";
 import { Tasks } from "Tasks";
 import { GetRoomObjects } from "GetRoomObjects";
-import { MY_SIGNATURE, TERMINAL_MIN_ENERGY, TERMINAL_MAX_ENERGY, TERMINAL_MIN_MINERAL, TERMINAL_MAX_MINERAL, FlagName } from "Constants";
+import { MY_SIGNATURE, TERMINAL_MIN_ENERGY, TERMINAL_MAX_ENERGY, TERMINAL_MIN_MINERAL, TERMINAL_MAX_MINERAL, BoostActionType, FlagName } from "Constants";
 import { profile } from "./Profiler";
 import { TradeHub } from "TradeHub";
 import { Laboratory } from "Laboratory";
+import { Mothership } from "Mothership";
 
 @profile
 export class ProbeLogic {
@@ -31,6 +32,9 @@ export class ProbeLogic {
   }
 
   public static upgraderLogic(probe: Probe): void {
+    if (ProbeLogic.boostCreep(probe, BoostActionType.UPGRADE, 1, 1) == OK) {
+      return;
+    }
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -573,16 +577,16 @@ export class ProbeLogic {
     }
   }
 
-  public static merchantLogic(probe: Probe, tradeHub: TradeHub, laboratory: Laboratory | null): void {
+  public static merchantLogic(probe: Probe, tradeHub: TradeHub, laboratory: Laboratory): void {
     let storage = GetRoomObjects.getStorage(probe);
-    if (!storage || !tradeHub)
+    if (!storage)
       return;
 
     //TODO: External stuff can cause the poor merchant to get stuck on a task
     let resourceMovementTask: ResourceMovementTask | undefined | null = probe.memory.resourceMovementTask;
 
     if (!resourceMovementTask && laboratory) {
-      resourceMovementTask = laboratory.getLaboratoryJob(tradeHub)
+      resourceMovementTask = laboratory.getLaboratoryJob()
     }
     if (!resourceMovementTask) {
       resourceMovementTask = probe.memory.resourceMovementTask ? probe.memory.resourceMovementTask : this.getResourceMovementTask(probe);
@@ -687,6 +691,37 @@ export class ProbeLogic {
           foundCurrentRoom = true;
         }
       }
+    }
+  }
+
+  private static boostCreep(probe: Probe, actionToBoost: string, numberOfPartsToBoost: number, tierOfBoost: number): ScreepsReturnCode {
+    if (probe.memory.bodyPartsUpgraded == true)
+      return ERR_FULL;
+    let laboratory = Mothership.laboratories[probe.room.name];
+    if (!laboratory) {
+      return ERR_NOT_FOUND;
+    }
+    let boostRequest: BoostRequest = {
+      actionToBoost: actionToBoost,
+      numberOfPartsToBoost: numberOfPartsToBoost,
+      tierOfBoost: tierOfBoost,
+      probeId: probe.id,
+    }
+    if (!laboratory.boostRequest) {
+      let result = laboratory.requestBoosting(boostRequest);
+      if (result == OK) {
+        probe.goTo(laboratory.labForBoosting.pos);
+        return OK;
+      } else {
+        return result;
+      }
+    }
+    else if (laboratory.boostRequest.probeId == probe.id) {
+      probe.goTo(laboratory.labForBoosting.pos);
+      return OK;
+    }
+    else {
+      return ERR_BUSY;//Someone else is boosting
     }
   }
 }

@@ -14,6 +14,25 @@ import { CreepRole, FlagName } from "Constants";
 
 @profile
 export class Mothership {
+  static laboratories: { [roomName: string]: Laboratory };
+  static tradeHubs: { [roomName: string]: TradeHub };
+
+  public static initialize() {
+    Mothership.laboratories = {};
+    Mothership.tradeHubs = {};
+    let myRooms = Tasks.getmyRoomsWithController();
+    myRooms.forEach(function (room) {
+      let labs = GetRoomObjects.getLabs(room);
+      let terminal = GetRoomObjects.getTerminalFromRoom(room);
+      if (terminal) {
+        Mothership.tradeHubs[room.name] = new TradeHub(terminal);
+      }
+      if (labs.length >= 3 && Mothership.tradeHubs[room.name]) {
+        Mothership.laboratories[room.name] = new Laboratory(labs, Mothership.tradeHubs[room.name]);
+      }
+    });
+  }
+
   public static work() {
     let roomsToHarvest = Tasks.getRoomsToHarvest();
 
@@ -88,15 +107,14 @@ export class Mothership {
 
       Stargate.moveEnergyAround(room);
 
-      if (Game.time % 5 == 0) {
-        let terminal = GetRoomObjects.getTerminalFromRoom(room);
-        if (terminal) {
-          let tradeHub = new TradeHub(terminal);
-          tradeHub.setUpBuyOrders();
-          tradeHub.setUpSellOrders();
-          tradeHub.buyFromMarket();
-          tradeHub.sellToMarket();
-        }
+      if (Game.time % 20 == 0 && Mothership.tradeHubs[room.name]) {
+        Mothership.tradeHubs[room.name].setUpBuyOrders();
+        Mothership.tradeHubs[room.name].setUpSellOrders();
+        Mothership.tradeHubs[room.name].buyFromMarket();
+        Mothership.tradeHubs[room.name].sellToMarket();
+      }
+      if (Mothership.laboratories[room.name]) {
+        Mothership.laboratories[room.name].runReaction();
       }
     })
 
@@ -143,12 +161,8 @@ export class Mothership {
           ProbeLogic.decoyLogic(probe);
           break;
         case CreepRole.MERCHANT:
-          let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);//TODO: should only create one tradehub
-          let labs = GetRoomObjects.getLabs(probe.room);
-          if (terminal) {
-            let tradeHub = new TradeHub(terminal);
-            let laboratory = labs.length >= 3 ? new Laboratory(labs) : null;
-            ProbeLogic.merchantLogic(probe, tradeHub, laboratory);
+          if (Mothership.tradeHubs[probe.room.name] && Mothership.laboratories[probe.room.name]) {
+            ProbeLogic.merchantLogic(probe, Mothership.tradeHubs[probe.room.name], Mothership.laboratories[probe.room.name]);
           }
           break;
       }

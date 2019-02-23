@@ -50,7 +50,7 @@ export const REAGENTS: { [product: string]: [ResourceConstant, ResourceConstant]
   [RESOURCE_CATALYZED_GHODIUM_ALKALIDE]: [RESOURCE_GHODIUM_ALKALIDE, RESOURCE_CATALYST]
 };
 
-export const boostParts: { [boostType: string]: BodyPartConstant } = {
+export const BOOST_PARTS: { [boostType: string]: BodyPartConstant } = {
 
   'UH': ATTACK,           //+100% attack effectiveness
   'UO': WORK,             //+200% harvest effectiveness
@@ -87,7 +87,7 @@ export const boostParts: { [boostType: string]: BodyPartConstant } = {
 
 };
 
-export const boostResources: { [actionName: string]: { [boostLevel: number]: _ResourceConstantSansEnergy } } = {
+export const BOOST_RESOURCES: { [actionName: string]: { [boostLevel: number]: ResourceConstant } } = {
   'attack': {
     1: 'UH',
     2: 'UH2O',
@@ -140,6 +140,19 @@ export const boostResources: { [actionName: string]: { [boostLevel: number]: _Re
   },
 
 };
+
+export const enum BoostActionType {
+  ATTACK = "attack",
+  CARRY = "carry",
+  RANGED_ATTACK = "ranged_attack",
+  HEAL = "heal",
+  MOVE = "move",
+  TOUGH = "tough",
+  HARVEST = "harvest",
+  CONSTRUCT = "construct",
+  DISMANTLE = "dismantle",
+  UPGRADE = "upgrade",
+}
 
 export const enum CreepRole {
   UNASSIGNED = "none",

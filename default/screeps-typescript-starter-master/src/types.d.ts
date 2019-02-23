@@ -15,6 +15,7 @@ interface CreepMemory {
   harvestCooldownXTicks?: number;
   lastHarvestTick?: number;
   resourceMovementTask?: ResourceMovementTask;
+  bodyPartsUpgraded?: boolean;
 }
 
 interface Path {
@@ -42,6 +43,15 @@ interface ResourceMovementTask {
   fromId: string;
   toId: string;
   pickedUp: boolean
+}
+
+interface BoostRequest {
+  actionToBoost: string;
+  tierOfBoost: number;
+  numberOfPartsToBoost: number;
+  probeId: string;
+  mineralUsedForBoost?: ResourceConstant;
+  mineralAmountNeeded?: number;
 }
 
 // `global` extension samples

@@ -22,6 +22,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
   //MemoryManager.initializeMemory();
   global.MemoryManager = new MemoryManager();
+  Mothership.initialize();
   Mothership.work();
 
   BaseBuilder.storeBuildOptionInMemory();

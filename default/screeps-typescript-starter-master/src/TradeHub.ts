@@ -35,7 +35,8 @@ export class TradeHub {
   }
 
   setUpSellOrders() {
-    if (this.cooldown > 0) {
+    //TODO: Optimize this
+    if (this.cooldown >= 0) {
       return;
     }
     let orders = Tasks.getSellOrdersToCreate();

@@ -24,7 +24,6 @@ export class Probe {
   ticksToLive: number | undefined;	// |
   //lifetime: number;
   actionLog: { [actionName: string]: boolean }; // Tracks the actions that a creep has completed this tick
-  blockMovement: boolean; 			// Whether the zerg is allowed to move or not
 
   constructor(creep: Creep) {
     this.creep = creep;
@@ -48,7 +47,6 @@ export class Probe {
     this.ticksToLive = creep.ticksToLive;
     //this.lifetime = this.getBodyparts(CLAIM) > 0 ? CREEP_CLAIM_LIFE_TIME : CREEP_LIFE_TIME;
     this.actionLog = {};
-    this.blockMovement = false;
   }
 
   build(structure: ConstructionSite) {
@@ -308,19 +306,6 @@ export class Probe {
     return result;
   }
 
-  boost(lab: StructureLab, bodyPartsCount?: number) {
-    let result = lab.boostCreep(this.creep, bodyPartsCount);
-    if (result == ERR_NOT_IN_RANGE) {
-      if (this.memory.useCashedPath) {
-        this.goToCashed(lab.pos)
-      } else {
-        this.goTo(lab.pos);
-      }
-    }
-    this.memory.targetId = lab.id;
-    return result;
-  }
-
   goTo(destination: RoomPosition, strokeColor: string = "") {
     if (strokeColor != "") {
       return this.creep.moveTo(destination, { reusePath: 10, visualizePathStyle: { stroke: strokeColor } });
@@ -341,6 +326,16 @@ export class Probe {
 
   goToDifferentRoom(destination: string) {
     return this.creep.moveTo(new RoomPosition(25, 25, destination));
+  }
+
+  getNumberOfBoostedBodyPart(bodyType: BodyPartConstant): number {
+    let total = 0;
+    for (let i in this.creep.body) {
+      if (this.creep.body[i].type == bodyType && this.creep.body[i].boost) {
+        total++;
+      }
+    }
+    return total;
   }
 
   static getActiveBodyPartsFromArrayOfProbes(probes: Probe[], bodyPart: BodyPartConstant) {
