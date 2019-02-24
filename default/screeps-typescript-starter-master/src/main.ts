@@ -5,6 +5,7 @@ import { BaseBuilder } from "BaseBuilder/BaseBuilder";
 
 
 import * as Profiler from "./Profiler";
+import MM from "Mastermind";
 global.Profiler = Profiler.init();
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
@@ -22,6 +23,36 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
   //MemoryManager.initializeMemory();
   global.MemoryManager = new MemoryManager();
+
+  try {
+    if (!Mastermind || Game.time % 20 == 0) {
+      delete global.Mastermind;
+      global.Mastermind = new MM();
+      Mastermind.initialize();
+      console.log("Full reset")
+    }
+    else {
+
+    }
+  }
+  catch{
+    delete global.Mastermind;
+    global.Mastermind = new MM();
+    Mastermind.initialize();
+    console.log("Full reset")
+  }
+
+
+  //if (!Mastermind || Game.time % 20 == 0) {
+  //  delete global.Mastermind;
+  //  global.Mastermind = new MM();
+  //  Mastermind.initialize();
+  //} else {
+  //  //refresh
+  //}
+
+
+
   Mothership.initialize();
   Mothership.work();
 
@@ -30,10 +61,12 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
 
   // Automatically delete memory of missing creeps
-  for (const name in Memory.creeps) {
+  for (let name in Memory.creeps) {
     if (!(name in Game.creeps)) {
       delete Memory.creeps[name];
     }
   }
+
+  Mastermind.cache();
 
 });

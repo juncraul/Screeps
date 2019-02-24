@@ -62,7 +62,7 @@ export class Laboratory {
     if (currentReactionFromMemory) {
       let currentReaction = reactionSchedules.filter(a => a.resourceType == currentReactionFromMemory)[0]
       if (currentReaction) {
-        let amoutToProduce = currentReaction.threshold - this.tradeHub.getResourceAmountFromTerminal(currentReaction.resourceType);
+        let amoutToProduce = currentReaction.threshold - this.tradeHub.getResourceAmountFromTerminal(currentReaction.resourceType) - this.getMineralAmountFromLab(this.labCompounds, currentReaction.resourceType);
         if (amoutToProduce > 0) {
           let reagent0 = REAGENTS[currentReaction.resourceType]["0"];
           let reagent1 = REAGENTS[currentReaction.resourceType]["1"];
@@ -86,7 +86,9 @@ export class Laboratory {
         Helper.setCashedMemory("CurrentReaction-" + this.room.name, reactionSchedules[i].resourceType);
         let reagent0 = REAGENTS[reactionSchedules[i].resourceType]["0"];
         let reagent1 = REAGENTS[reactionSchedules[i].resourceType]["1"];
-        let minReagentRemaining = this.tradeHub.getResourceAmountFromTerminal(reagent0) < this.tradeHub.getResourceAmountFromTerminal(reagent1) ? this.tradeHub.getResourceAmountFromTerminal(reagent0) : this.tradeHub.getResourceAmountFromTerminal(reagent1)
+        let reagent0Amount = this.tradeHub.getResourceAmountFromTerminal(reagent0) + this.getMineralAmountFromLab(this.labReagentZero, reagent0);
+        let reagent1Amount = this.tradeHub.getResourceAmountFromTerminal(reagent1) + this.getMineralAmountFromLab(this.labReagentOne, reagent1);
+        let minReagentRemaining = reagent0Amount < reagent1Amount ? reagent0Amount : reagent1Amount
         amoutToProduce = minReagentRemaining < amoutToProduce ? minReagentRemaining : amoutToProduce;//Terminal almost empty, do reaction with what is left.
         let merchantTask: ResourceMovementTask | null;
         merchantTask = this.getMerchantTaskPerLab(this.labReagentZero, reagent0, amoutToProduce - this.getMineralAmountFromLab(this.labCompounds, reactionSchedules[i].resourceType))

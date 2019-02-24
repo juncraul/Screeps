@@ -1,3 +1,4 @@
+
 // example declaration file - remove these and add your own custom typings
 
 // memory extension samples
@@ -16,6 +17,7 @@ interface CreepMemory {
   lastHarvestTick?: number;
   resourceMovementTask?: ResourceMovementTask;
   bodyPartsUpgraded?: boolean;
+  siteId?: string;
 }
 
 interface Path {
@@ -60,9 +62,25 @@ declare namespace NodeJS {
     log: any;
     Profiler: Profiler;
     MemoryManager: IMemoryManager
+    Mastermind: IMastermind
   }
 
 }
+
+interface ISite {
+  run(): void;
+}
+
 interface IMemoryManager {
   
 }
+
+interface IMastermind {
+  probesAtSites: { [siteId: string]: string[] };
+  sites: ISite[];
+
+  initialize(): void;
+  cache(): void
+}
+
+declare var Mastermind: IMastermind;

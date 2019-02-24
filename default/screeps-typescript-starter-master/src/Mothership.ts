@@ -2,7 +2,6 @@ import { Nexus } from "Nexus";
 import { Probe } from "Probe";
 import { ProbeSetup } from "ProbeSetup";
 import { ProbeLogic } from "ProbeLogic";
-import { Cannon } from "Cannon";
 import { Tasks } from "Tasks";
 import { Stargate } from "Stargate";
 import { TradeHub } from "TradeHub";
@@ -19,20 +18,24 @@ export class Mothership {
   static tradeHubs: { [roomName: string]: TradeHub };
   static requestRenewProbeId: { [roomName: string]: string };
   static renewalSpawn: { [roomName: string]: string };
+  
 
   public static initialize() {
     Mothership.laboratories = {};
     Mothership.tradeHubs = {};
     Mothership.requestRenewProbeId = {};
     Mothership.renewalSpawn = {};
+    //Mothership.probesAtSites = {};
+    //Mothership.sites = [];
     let myRooms = Tasks.getmyRoomsWithController();
     myRooms.forEach(function (room) {
       let labs = GetRoomObjects.getLabs(room);
       let terminal = GetRoomObjects.getTerminalFromRoom(room);
+      let storage = GetRoomObjects.getStorage(room);
       let spawn = GetRoomObjects.getSpawn(room);
       let probeIdForRenawal = Helper.getCashedMemory("RequestRenew-" + room.name, null);
-      if (terminal) {
-        Mothership.tradeHubs[room.name] = new TradeHub(terminal);
+      if (terminal && storage) {
+        Mothership.tradeHubs[room.name] = new TradeHub(terminal, storage);
       }
       if (labs.length >= 3 && Mothership.tradeHubs[room.name]) {
         Mothership.laboratories[room.name] = new Laboratory(labs, Mothership.tradeHubs[room.name]);
@@ -45,7 +48,7 @@ export class Mothership {
       }
     });
   }
-
+  
   public static work() {
     let roomsToHarvest = Tasks.getRoomsToHarvest();
 
@@ -130,7 +133,7 @@ export class Mothership {
 
       let allCannons = Nexus.getCannons(room);
       allCannons.forEach(function (cannon) {
-        Mothership.cannonLogic(cannon);
+        cannon.cannonLogic();
       })
 
       Stargate.moveEnergyAround(room);
@@ -152,9 +155,6 @@ export class Mothership {
         return;
       }
       switch (probe.memory.role) {
-        case CreepRole.HARVESTER:
-          ProbeLogic.harvesterLogic(probe);
-          break;
         case CreepRole.UPGRADER:
           ProbeLogic.upgraderLogic(probe);
           break;
@@ -201,37 +201,9 @@ export class Mothership {
           break;
       }
     });
-  }
 
-  private static cannonLogic(cannon: Cannon): void {
-    let enemy = GetRoomObjects.getClosestEnemy(cannon);
-    if (enemy) {
-      cannon.attack(enemy);
-    }
-    else {
-      let damagedUnit = GetRoomObjects.getClosestDamagedUnit(cannon);
-      if (damagedUnit) {
-        cannon.heal(damagedUnit);
-      }
-      else if (cannon.energy > cannon.energyCapacity * 0.5) {
-        let structure = GetRoomObjects.getClosestStructureToRepairByRange(cannon.pos, 0.5);
-        if (structure) {
-          cannon.repair(structure);
-        }
-        else {
-          let structure = GetRoomObjects.getClosestStructureToRepairByRange(cannon.pos, 0.8);
-          if (structure) {
-            cannon.repair(structure);
-          }
-          else if (Game.time % 10 < 5) {
-            let structure = GetRoomObjects.getClosestStructureToRepairByRange(cannon.pos, 0.8, true);
-            if (structure) {
-              cannon.repair(structure);
-            }
-          }
-
-        }
-      }
+    for (let i in Mastermind.sites) {
+      Mastermind.sites[i].run(); Game
     }
   }
 
@@ -270,7 +242,7 @@ export class Mothership {
     let carriers = Nexus.getProbes(CreepRole.CARRIER, roomToSpawnFrom.name);
     let longDistanceHarvesters = Nexus.getProbes(CreepRole.LONG_DISTANCE_HARVESTER, roomToSpawnFrom.name, true);
     let harvestersAboutToDie = _.filter(harvesters, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
-    let mineral = GetRoomObjects.getAvailableMineral(roomToSpawnFrom);
+    let mineral = GetRoomObjects.getMineral(roomToSpawnFrom, true);
     let sources = roomToSpawnFrom.find(FIND_SOURCES).length + (mineral ? 1 : 0);
     let controller = GetRoomObjects.getController(roomToSpawnFrom);
     let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(harvesters, WORK) + Probe.getActiveBodyPartsFromArrayOfProbes(longDistanceHarvesters, WORK);
@@ -280,7 +252,6 @@ export class Mothership {
 
     if (harvesters.length >= Mothership.getMaximumPossibleNumberOfHarvesters(roomToSpawnFrom))
       return false;
-
     if (!controller) {
       return false;
     }
@@ -319,9 +290,10 @@ export class Mothership {
     energyToUse = roomToSpawnFrom.energyCapacityAvailable < energyToUse ? roomToSpawnFrom.energyCapacityAvailable : energyToUse;
 
     //Emergency situation with no carriers and we don't have energy to build the latest harvester. Quickly build 2 low harvesters.
-    if (carriers.length == 0 && roomToSpawnFrom.energyAvailable < energyToUse && harvesters.length < 2) {
+    if (carriers.length == 0 && roomToSpawnFrom.energyAvailable < energyToUse && harvesters.length < 2 + (mineral ? 1 : 0)) {
       energyToUse = 200;//1 Work; 1 Carry; 1 Move
       probeSetupHarvester = probeSetupHarvesterOne;
+      
     }
     else { //Emergency situation with no harvesters and we don't have energy to build the latest harvester. Quickly build 1 low harvester.
       if (harvesters.length == 0 && roomToSpawnFrom.energyAvailable < energyToUse) {
@@ -332,6 +304,11 @@ export class Mothership {
         if (workBodyParts < 3 && roomToSpawnFrom.energyAvailable < energyToUse) {
           energyToUse = 400;//3 Work; 1 Carry; 1 Move
           probeSetupHarvester = probeSetupHarvesterTwo;
+        }
+        else {
+          if (carriers.length == 0) {//Let carriers to be built
+            return false;
+          }
         }
       }
     }
@@ -358,6 +335,7 @@ export class Mothership {
     let carriers = Nexus.getProbes(CreepRole.CARRIER, roomToSpawnFrom.name);
     let carriersAboutToDie = _.filter(carriers, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
     let controller = GetRoomObjects.getController(roomToSpawnFrom);
+    let carryBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(carriers, CARRY) 
     let energyToUse: number;
     let levelBlueprintToBuild: number;
     let deposit = roomToSpawnFrom.find(FIND_STRUCTURES, { filter: structure => structure.structureType == STRUCTURE_CONTAINER });
@@ -402,6 +380,12 @@ export class Mothership {
     if (carriers.length == 0 && roomToSpawnFrom.energyAvailable < energyToUse) {
       energyToUse = 100;//1 Carry; 1 Move
       probeSetupCarrier = probeSetupCarrierOne;
+    }
+    else {
+      if (carriers.length == 1 && carryBodyParts <= 5) {//We have a weak carry build a level 3 one
+        energyToUse = 500;//5 Carry; 5 Move
+        probeSetupCarrier = probeSetupCarrierThree;
+      }
     }
 
     if (carriers.length >= 2) {

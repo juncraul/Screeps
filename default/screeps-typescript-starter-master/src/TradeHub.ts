@@ -15,11 +15,12 @@ export class TradeHub {
   storeCapacity: number;
   structureType: StructureConstant;
   terminal: StructureTerminal;
+  storage: StructureStorage;
 
   //One time only send resource for rooms in need
   //Game.getObjectById("5c6884ec6f956a230ba5654c").send(RESOURCE_ENERGY, 10000, "E32N44", "yoyoy");
 
-  constructor(terminal: StructureTerminal) {
+  constructor(terminal: StructureTerminal, storage: StructureStorage) {
     this.cooldown = terminal.cooldown;
     this.hits = terminal.hits;
     this.hitsMax = terminal.hitsMax;
@@ -32,23 +33,22 @@ export class TradeHub {
     this.storeCapacity = terminal.storeCapacity;
     this.structureType = terminal.structureType;
     this.terminal = terminal;
+    this.storage = storage
   }
 
   setUpSellOrders() {
-    //TODO: Optimize this
-    if (this.cooldown >= 0) {
-      return;
-    }
     let orders = Tasks.getSellOrdersToCreate();
-    let ordersFromTerminalRoom = TradeHub.getOrdersFromRoom(this.room);
 
     for (let i = 0; i < orders.length; i++) {
-      let availableForSale = this.store[<ResourceConstant>orders[i].resourceType]! - orders[i].threshold;
-      if (availableForSale <= 0)
+      let amountOfResource = this.getResourceAmountFromTerminal(orders[i].resourceType) + this.getResourceAmountFromStorage(orders[i].resourceType);
+      let availableForSale = this.getResourceAmountFromTerminal(orders[i].resourceType) - orders[i].threshold;
+      let ordersFromTerminalRoom = TradeHub.getOrdersFromRoom(this.room, orders[i].resourceType);
+      if (amountOfResource < orders[i].threshold * 2 //Leave at least double
+        || ordersFromTerminalRoom.length > 0 //Order already placed for this resource
+        || availableForSale <= 0) { //Available to sell so that we leave the threshold in terminal
         continue;
-      if (ordersFromTerminalRoom.filter(ord => ord.resourceType == orders[i].resourceType).length == 0) {
-        this.createOrder(ORDER_SELL, orders[i].resourceType, orders[i].price, availableForSale)
       }
+      this.createOrder(ORDER_SELL, orders[i].resourceType, orders[i].price, availableForSale)
     }
   }
 
@@ -110,13 +110,20 @@ export class TradeHub {
   getResourceAmountFromTerminal(resource: ResourceConstant): number {
     return (this.store[resource] ? this.store[resource]! : 0)
   }
+  getResourceAmountFromStorage(resource: ResourceConstant): number {
+    return (this.store[resource] ? this.store[resource]! : 0)
+  }
 
   static getTotalTranCost(amountToBuy: number, price: number, roomName1: string, roomName2: string): number {
     return (Game.market.calcTransactionCost(amountToBuy, roomName1, roomName2) + price * amountToBuy)
   }
 
-  static getOrdersFromRoom(room: Room): Order[] {
-    return Game.market.getAllOrders({ roomName: room.name });//TODO: use the orders object
+  static getOrdersFromRoom(room: Room, resource?: ResourceConstant): Order[] {
+    if (resource) {
+      return Game.market.getAllOrders({ roomName: room.name, resourceType: resource });//TODO: use the orders object
+    } else {
+      return Game.market.getAllOrders({ roomName: room.name });//TODO: use the orders object
+    }
   }
 
   static getOrdersFromMarket(resource: ResourceConstant, price: number, orderType: string): Order[] {

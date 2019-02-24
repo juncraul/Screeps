@@ -11,28 +11,11 @@ import { Helper } from "Helper";
 @profile
 export class ProbeLogic {
 
-  public static harvesterLogic(probe: Probe): void {
-    if (_.sum(probe.carry) === probe.carryCapacity && probe.carryCapacity != 0) {
-      let deposit = GetRoomObjects.getClosestEmptyDeposit(probe);
-      if (deposit) {
-        probe.transferAll(deposit);
-      }
-    } else {
-      let source = GetRoomObjects.getClosestActiveSourceDivided(probe, true);
-      if (source) {
-        let containerNextToSource = GetRoomObjects.getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-        if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
-          if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-            probe.goTo(containerNextToSource.pos);
-          }
-        } else {
-          probe.harvest(source);
-        }
-      }
-    }
-  }
-
   public static upgraderLogic(probe: Probe): void {
+    if (probe.room.name != probe.memory.homeName) {
+      ProbeLogic.goToRemoteRoom(probe, probe.memory.homeName);
+      return;
+    }
     if (ProbeLogic.boostCreep(probe, BoostActionType.UPGRADE, 1, 1) == OK) {
       return;
     }
@@ -82,6 +65,10 @@ export class ProbeLogic {
   }
 
   public static builderLogic(probe: Probe): void {
+    if (probe.room.name != probe.memory.homeName) {
+      ProbeLogic.goToRemoteRoom(probe, probe.memory.homeName);
+      return;
+    }
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -147,6 +134,10 @@ export class ProbeLogic {
   }
 
   public static carrierLogic(probe: Probe): void {
+    if (probe.room.name != probe.memory.homeName) {
+      ProbeLogic.goToRemoteRoom(probe, probe.memory.homeName);
+      return;
+    }
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -218,6 +209,10 @@ export class ProbeLogic {
   }
 
   public static repairerLogic(probe: Probe): void {
+    if (probe.room.name != probe.memory.homeName) {
+      ProbeLogic.goToRemoteRoom(probe, probe.memory.homeName);
+      return;
+    }
     if (_.sum(probe.carry) === probe.carryCapacity) {
       probe.memory.isWorking = true;
       probe.memory.isGathering = false;
@@ -569,7 +564,7 @@ export class ProbeLogic {
   }
 
   public static merchantLogic(probe: Probe, tradeHub: TradeHub, laboratory: Laboratory): void {
-    let storage = GetRoomObjects.getStorage(probe);
+    let storage = GetRoomObjects.getStorage(probe.room);
     if (!storage)
       return;
 
@@ -577,10 +572,13 @@ export class ProbeLogic {
     let resourceMovementTask: ResourceMovementTask | undefined | null = probe.memory.resourceMovementTask;
 
     if (!resourceMovementTask) {
-      resourceMovementTask = probe.memory.resourceMovementTask ? probe.memory.resourceMovementTask : this.getResourceMovementTask(probe);
+      resourceMovementTask = this.getResourceMovementTask(probe);
     }
     if (!resourceMovementTask && laboratory) {
       resourceMovementTask = laboratory.getLaboratoryJob()
+    }
+    if (!resourceMovementTask && laboratory) {
+      resourceMovementTask = this.getLabRefill(probe, laboratory.labForBoosting)
     }
 
     if (resourceMovementTask) {
@@ -609,30 +607,6 @@ export class ProbeLogic {
             probe.memory.resourceMovementTask = undefined;
           } if (result == ERR_FULL) {
             probe.memory.resourceMovementTask = undefined;//Can't move the resource, other type of resource got in the structure
-          }
-        }
-      }
-    }
-    else {
-      let labs = GetRoomObjects.getLabs(probe.room).filter(a => a.energy < a.energyCapacity);//Check for labs that need energy refill
-      if (labs.length != 0) {
-        if (_.sum(probe.carry) == probe.carry[RESOURCE_ENERGY]) {
-          if (_.sum(probe.carry) != probe.carryCapacity) {
-            let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);
-            if (terminal) {
-              probe.withdraw(terminal, RESOURCE_ENERGY);
-            }
-          }
-          else {
-            probe.transfer(labs[0], RESOURCE_ENERGY);
-          }
-        }
-        else {
-          if (_.sum(probe.carry) > 0) {
-            let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);
-            if (terminal) {
-              probe.transferAll(terminal);
-            }
           }
         }
       }
@@ -683,9 +657,17 @@ export class ProbeLogic {
       }
     }
   }
+
+  private static getLabRefill(probe: Probe, lab: StructureLab): ResourceMovementTask | null {
+    let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);
+    if (lab.energy < lab.energyCapacity && terminal) {
+      return { amount: lab.energyCapacity - lab.energy, fromId: terminal.id, toId: lab.id, mineralType: RESOURCE_ENERGY, pickedUp: false };
+    }
+    return null;
+  }
   
   private static getResourceMovementTask(probe: Probe): ResourceMovementTask | null {
-    let storage = GetRoomObjects.getStorage(probe);
+    let storage = GetRoomObjects.getStorage(probe.room);
     let terminal = GetRoomObjects.getTerminalFromRoom(probe.room);
     if (!storage || !terminal)
       return null;

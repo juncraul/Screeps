@@ -11,7 +11,6 @@ export class MemoryManager implements IMemoryManager {
     if (Memory.Keys == undefined) {
       Memory.Keys = new Object();
     }
-    this.initializeSource();
     //this.initializeContainers();
     if (Game.time % 5 == 0) {
       this.saveRoomsToMemory();
@@ -42,7 +41,7 @@ export class MemoryManager implements IMemoryManager {
     sources = [];
     rooms.forEach(function (room) {
       let sourcesFromRoom = room.find(FIND_SOURCES);
-      let mineralFromRoom = GetRoomObjects.getAvailableMineral(room);
+      let mineralFromRoom = GetRoomObjects.getMineral(room, true);
       sourcesFromRoom.forEach(function (source) {
         sources.push(source);
       })

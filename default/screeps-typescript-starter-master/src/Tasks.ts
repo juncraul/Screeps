@@ -13,8 +13,8 @@ export class Tasks {
       case "shard3"://Public Free-Subscription
         return [
           "E33N44",
-          //"E33N45",
-          "E33N43",
+          "E33N45",
+          //"E33N43",
           //"E32N45",
           "E31N44",
           //"E33N42",
@@ -109,7 +109,7 @@ export class Tasks {
 
   public static getSellOrdersToCreate(): OrderSchedule[] {
     return [
-      //new OrderSchedule(RESOURCE_ENERGY, 0.001, 10000)
+      new OrderSchedule(RESOURCE_ENERGY, 0.149, 10000)
     ];
   }
 

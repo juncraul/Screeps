@@ -14,9 +14,9 @@ export class GetRoomObjects {
     //  return previouslyAssignedTo;
     //}
     let sources: (Mineral | Source)[]
-    sources = GetRoomObjects.getAvailableSources(probe.room);
+    sources = GetRoomObjects.getSources(probe.room, true);
     if (includeMineralDeposit) {
-      let mineral = GetRoomObjects.getAvailableMineral(probe.room);
+      let mineral = GetRoomObjects.getMineral(probe.room, true);
       if (mineral) {
         sources.push(mineral);
       }
@@ -86,23 +86,23 @@ export class GetRoomObjects {
     }
   }
 
-  public static getAvailableSources(room: Room): Source[] {
+  public static getSources(room: Room, onlyActive: boolean = false): Source[] {
     let roomMemory = MemoryManager.getRoomMemory(room.name);
     let sources: Source[] = [];
     if (!roomMemory)
       return [];
     for (let sourceIndex in roomMemory.sources) {
       let source = Game.getObjectById(roomMemory.sources[sourceIndex]);
-      if (source instanceof Source && source.energy > 0) {
+      if (source instanceof Source && (onlyActive ? source.energy > 0 : true)) {
         sources.push(source)
       }
     }
     return sources;
   }
 
-  public static getAvailableMineral(room: Room): Mineral | null {
+  public static getMineral(room: Room, onlyActive: boolean = false): Mineral | null {
     let mineralExtractor = room.find(FIND_STRUCTURES, { filter: (structure) => { return (structure.structureType === STRUCTURE_EXTRACTOR) } })[0];
-    let mineral = room.find(FIND_MINERALS, { filter: mineral => mineral.mineralAmount > 0 })[0];
+    let mineral = room.find(FIND_MINERALS, { filter: mineral => (onlyActive ?  mineral.mineralAmount > 0 : true) })[0];
     if (mineralExtractor && mineral) {
       return mineral;
     } else {
@@ -134,7 +134,7 @@ export class GetRoomObjects {
     let previousDeposit = probe.room.find(FIND_STRUCTURES, {
       filter: structure => structure.id == probe.memory.targetId &&
         ((structure.structureType == STRUCTURE_LINK && structure.energy > whenIsMoreThan) ||
-          ((structure.structureType == STRUCTURE_CONTAINER || structure.structureType == STRUCTURE_STORAGE)
+        ((structure.structureType == STRUCTURE_CONTAINER || (!excludeStorage && structure.structureType == STRUCTURE_STORAGE))
             && ((onlyEnergy && structure.store[RESOURCE_ENERGY] > whenIsMoreThan) || (!onlyEnergy && _.sum(structure.store) > whenIsMoreThan))))
     })[0]
     if (previousDeposit) {
@@ -239,8 +239,8 @@ export class GetRoomObjects {
     return deposit
   }
 
-  public static getStorage(probe: Probe): StructureStorage | null {
-    let deposit = probe.room.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_STORAGE) })[0];
+  public static getStorage(room: Room): StructureStorage | null {
+    let deposit = room.find(FIND_STRUCTURES, { filter: structure => (structure.structureType == STRUCTURE_STORAGE) })[0];
     return deposit instanceof StructureStorage ? deposit : null;
   }
 
@@ -268,8 +268,6 @@ export class GetRoomObjects {
   }
 
   public static getClosestStructureToRepairByPath(pos: RoomPosition, damageProportionForNonWallRamp: number, includeRampartsWalls: boolean = false): Structure | null {
-    if (pos.roomName == "E31N46")
-      return null;
     let structure = pos.findClosestByPath(FIND_STRUCTURES, {
       filter: structure => (structure.hits < structure.hitsMax * damageProportionForNonWallRamp)
         && (structure.structureType != STRUCTURE_WALL && structure.structureType != STRUCTURE_RAMPART)

@@ -338,6 +338,16 @@ export class Probe {
     return total;
   }
 
+  getNumberOfBodyPart(bodyType: BodyPartConstant): number {
+    let total = 0;
+    for (let i in this.creep.body) {
+      if (this.creep.body[i].type == bodyType) {
+        total++;
+      }
+    }
+    return total;
+  }
+
   static getActiveBodyPartsFromArrayOfProbes(probes: Probe[], bodyPart: BodyPartConstant) {
   var bodyParts = 0;
     for (var i = 0; i < probes.length; i++) {
