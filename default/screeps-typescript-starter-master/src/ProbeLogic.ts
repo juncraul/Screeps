@@ -11,62 +11,9 @@ import { Helper } from "Helper";
 @profile
 export class ProbeLogic {
 
-  public static upgraderLogic(probe: Probe): void {
-    if (probe.room.name != probe.memory.homeName) {
-      ProbeLogic.goToRemoteRoom(probe, probe.memory.homeName);
-      return;
-    }
-    if (ProbeLogic.boostCreep(probe, BoostActionType.UPGRADE, 1, 1) == OK) {
-      return;
-    }
-    if (_.sum(probe.carry) === probe.carryCapacity) {
-      probe.memory.isWorking = true;
-      probe.memory.isGathering = false;
-    }
-    if (_.sum(probe.carry) === 0) {
-      probe.memory.isWorking = false;
-      probe.memory.isGathering = true;
-    }
-
-    if (probe.memory.isWorking) {
-      let controller = GetRoomObjects.getController(probe);
-      if (controller) {
-        if (Game.time % 1000 == 0) {
-          probe.sign(controller, MY_SIGNATURE);
-        }
-        probe.upgradeController(controller);
-      }
-    }
-    if (probe.memory.isGathering) {
-      let deposit = GetRoomObjects.getClosestFilledDeposit(probe, false, false, false, 300);
-      if (deposit) {
-        probe.withdraw(deposit, RESOURCE_ENERGY);
-      } else {
-        let droppedResource = GetRoomObjects.getDroppedResource(probe.pos);
-        if (droppedResource) {
-          probe.pickup(droppedResource);
-        }
-        else {
-          //Don't allow upgrader to harvest
-          //let source = GetRoomObjects.getClosestActiveSourceDivided(probe);
-          //if (source) {
-          //  let containerNextToSource = GetRoomObjects.getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-          //  if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
-          //    if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-          //      probe.goTo(containerNextToSource.pos);
-          //    }
-          //  } else {
-          //    probe.harvest(source);
-          //  }
-          //}
-        }
-      }
-    }
-  }
-
   public static builderLogic(probe: Probe): void {
     if (probe.room.name != probe.memory.homeName) {
-      ProbeLogic.goToRemoteRoom(probe, probe.memory.homeName);
+      probe.goToRemoteRoom(probe.memory.homeName);
       return;
     }
     if (_.sum(probe.carry) === probe.carryCapacity) {
@@ -135,7 +82,7 @@ export class ProbeLogic {
 
   public static carrierLogic(probe: Probe): void {
     if (probe.room.name != probe.memory.homeName) {
-      ProbeLogic.goToRemoteRoom(probe, probe.memory.homeName);
+      probe.goToRemoteRoom(probe.memory.homeName);
       return;
     }
     if (_.sum(probe.carry) === probe.carryCapacity) {
@@ -183,21 +130,25 @@ export class ProbeLogic {
       }
       else {
         let deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, true, true, 200, false);
-        if (!Game.flags[FlagName.WAR] && !deposit) {
+        if (!deposit && Game.flags[FlagName.WAR] && Game.flags[FlagName.WAR].secondaryColor == COLOR_RED) {
           deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, false, true, 200, false);//If at war, pick up from storage as well
         } 
         if (deposit) {
-          probe.withdrawAll(deposit);
+          if (deposit instanceof StructureStorage) {
+            probe.withdraw(deposit, RESOURCE_ENERGY);//Carriers should only pick up energy from storage
+          } else {
+            probe.withdrawAll(deposit);
+          }
         } else {
           let droppedResource = GetRoomObjects.getDroppedResource(probe.pos);
           if (droppedResource) {
             probe.pickup(droppedResource);
           }
           else {
-            deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, true, false, 200, false);
-            if (deposit) {
-              probe.withdrawAll(deposit);
-            }
+            //deposit = GetRoomObjects.getClosestFilledDeposit(probe, true, true, true, 200, false);
+            //if (deposit) {
+            //  probe.withdrawAll(deposit);
+            //}
           }
           if (!deposit && _.sum(probe.carry) > 0) {//Instead of waiting for a deposit to fill up, just return back what it currenlty has.
             probe.memory.isWorking = true;
@@ -210,7 +161,7 @@ export class ProbeLogic {
 
   public static repairerLogic(probe: Probe): void {
     if (probe.room.name != probe.memory.homeName) {
-      ProbeLogic.goToRemoteRoom(probe, probe.memory.homeName);
+      probe.goToRemoteRoom(probe.memory.homeName);
       return;
     }
     if (_.sum(probe.carry) === probe.carryCapacity) {
@@ -273,7 +224,7 @@ export class ProbeLogic {
 
   public static longDistanceHarvesterLogic(probe: Probe): void {
     if (probe.room.name != probe.memory.remote) {
-      ProbeLogic.goToRemoteRoom(probe, probe.memory.remote!); //TODO: We assume we always have remote here
+      probe.goToRemoteRoom(probe.memory.remote!); //TODO: We assume we always have remote here
     }
     else {
       if (_.sum(probe.carry) === probe.carryCapacity && probe.carryCapacity != 0) {
@@ -348,7 +299,7 @@ export class ProbeLogic {
 
     if (probe.memory.isGathering) {
       if (probe.room.name != probe.memory.remote) {
-        probe.goToDifferentRoom(probe.memory.remote!); //TODO: We assume we always have remote here
+        probe.goToRemoteRoom(probe.memory.remote!); //TODO: We assume we always have remote here
       } else {
         let droppedResource = GetRoomObjects.getDroppedResource(probe.pos);
         if (droppedResource) {
@@ -370,7 +321,7 @@ export class ProbeLogic {
     }
     if (probe.memory.isWorking) {
       if (probe.room.name != probe.memory.homeName) {
-        ProbeLogic.goToRemoteRoom(probe, probe.memory.homeName);
+        probe.goToRemoteRoom(probe.memory.homeName);
       }
       else {
         let supply = GetRoomObjects.getStructureToSupplyByRemoteWorkers(probe);
@@ -383,7 +334,7 @@ export class ProbeLogic {
 
   public static longDistanceBuilderLogic(probe: Probe): void {
     if (probe.room.name != probe.memory.remote) {
-      ProbeLogic.goToRemoteRoom(probe, probe.memory.remote!); //TODO: We assume we always have remote here
+      probe.goToRemoteRoom(probe.memory.remote!); //TODO: We assume we always have remote here
     }
     else {
       if (_.sum(probe.carry) === probe.carryCapacity) {
@@ -462,7 +413,7 @@ export class ProbeLogic {
 
   public static claimerLogic(probe: Probe): void {
     if (probe.room.name != probe.memory.remote) {
-      ProbeLogic.goToRemoteRoom(probe, probe.memory.remote!); //TODO: We assume we always have remote here
+      probe.goToRemoteRoom(probe.memory.remote!); //TODO: We assume we always have remote here
     }
     else {
       let controller = GetRoomObjects.getController(probe);
@@ -481,7 +432,7 @@ export class ProbeLogic {
 
   public static soldierLogic(probe: Probe): void {
     if (probe.room.name != probe.memory.remote) {
-      ProbeLogic.goToRemoteRoom(probe, probe.memory.remote!); //TODO: We assume we always have remote here
+      probe.goToRemoteRoom(probe.memory.remote!); //TODO: We assume we always have remote here
     }
     else {
       let enemy = GetRoomObjects.getClosestEnemy(probe);
@@ -509,15 +460,15 @@ export class ProbeLogic {
         const targetStructures = targetStructuresFromFlag.length == 0 ? probe.pos.findClosestByPath(FIND_HOSTILE_STRUCTURES) : targetStructuresFromFlag[0];
         if (targetCreeps && targetCreeps.pos.x != 0 && targetCreeps.pos.y != 0 && targetCreeps.pos.x != 49 && targetCreeps.pos.y != 49) {
           if (probe.attack(targetCreeps) == ERR_NOT_IN_RANGE || probe.rangedAttack(targetCreeps) == ERR_NOT_IN_RANGE) {
-            probe.goTo(targetCreeps.pos, '#ff0000');
+            probe.goTo(targetCreeps.pos, { stroke: '#00ff00' });
           }
         } else if (targetStructures) {
           if (probe.attack(targetStructures) == ERR_NOT_IN_RANGE || probe.rangedAttack(targetStructures) == ERR_NOT_IN_RANGE) {
-            probe.goTo(targetStructures.pos, '#ff0000');
+            probe.goTo(targetStructures.pos, { stroke: '#00ff00' });
           }
         }
         else {
-          probe.goTo(flagToAttackFrom.pos, '#ff0000');
+          probe.goTo(flagToAttackFrom.pos, { stroke: '#00ff00' });
         }
       }
     }
@@ -541,11 +492,11 @@ export class ProbeLogic {
         if (wondedCreep && wondedCreep.pos.x != 0 && wondedCreep.pos.y != 0 && wondedCreep.pos.x != 49 && wondedCreep.pos.y != 49) {
           if (probe.heal(wondedCreep) == ERR_NOT_IN_RANGE) {
             probe.rangedHeal(wondedCreep)
-            probe.goTo(wondedCreep.pos, '#00ff00');
+            probe.goTo(wondedCreep.pos, { stroke: '#00ff00' });
           }
         }
         else {
-          probe.goTo(flagToAttackFrom.pos, '#00ff00');
+          probe.goTo(flagToAttackFrom.pos, { stroke: '#00ff00' });
         }
       }
     }
@@ -556,7 +507,7 @@ export class ProbeLogic {
     if (!flagDecoy)
       return;
     if (probe.room.name != flagDecoy.pos.roomName) {
-      ProbeLogic.goToRemoteRoom(probe, flagDecoy.pos.roomName);
+      probe.goToRemoteRoom(flagDecoy.pos.roomName);
     }
     else {
         probe.goToCashed(flagDecoy.pos);
@@ -571,14 +522,14 @@ export class ProbeLogic {
     //TODO: External stuff can cause the poor merchant to get stuck on a task
     let resourceMovementTask: ResourceMovementTask | undefined | null = probe.memory.resourceMovementTask;
 
-    if (!resourceMovementTask) {
-      resourceMovementTask = this.getResourceMovementTask(probe);
-    }
     if (!resourceMovementTask && laboratory) {
       resourceMovementTask = laboratory.getLaboratoryJob()
     }
     if (!resourceMovementTask && laboratory) {
       resourceMovementTask = this.getLabRefill(probe, laboratory.labForBoosting)
+    }
+    if (!resourceMovementTask) {
+      resourceMovementTask = this.getResourceMovementTask(probe);
     }
 
     if (resourceMovementTask) {
@@ -642,17 +593,17 @@ export class ProbeLogic {
 
         if (targetCreeps && targetCreeps.pos.x != 0 && targetCreeps.pos.y != 0 && targetCreeps.pos.x != 49 && targetCreeps.pos.y != 49) {
           if (probe.attack(targetCreeps) == ERR_NOT_IN_RANGE || probe.rangedAttack(targetCreeps) == ERR_NOT_IN_RANGE) {
-            probe.goTo(targetCreeps.pos, '#ff0000');
+            probe.goTo(targetCreeps.pos, { stroke: '#ff0000' });
           }
         } 
         else if (wondedCreep && wondedCreep.pos.x != 0 && wondedCreep.pos.y != 0 && wondedCreep.pos.x != 49 && wondedCreep.pos.y != 49) {
           if (probe.heal(wondedCreep) == ERR_NOT_IN_RANGE) {
             probe.rangedHeal(wondedCreep)
-            probe.goTo(wondedCreep.pos, '#00ff00');
+            probe.goTo(wondedCreep.pos, { stroke: '#00ff00' });
           }
         }
         else {
-          probe.goTo(flagToAttackFrom.pos, '#ff0000');
+          probe.goTo(flagToAttackFrom.pos, { stroke: '#ff0000' });
         }
       }
     }
@@ -697,23 +648,7 @@ export class ProbeLogic {
     return null;
   }
 
-  private static goToRemoteRoom(probe: Probe, roomName: string) {
-    let path = Tasks.getFarAwayRoomPath(roomName);
-    if (path.length == 0) {
-      probe.goToDifferentRoom(roomName);
-    } else {
-      let foundCurrentRoom = false;
-      for (let currenRoomIndex in path) {
-        if (foundCurrentRoom) {
-          probe.goToDifferentRoom(path[currenRoomIndex]);
-          break;
-        }
-        if (path[currenRoomIndex] == probe.room.name) {
-          foundCurrentRoom = true;
-        }
-      }
-    }
-  }
+  
 
   private static goForRenawal(probe: Probe, ticksToLiveThreshold: number): ScreepsReturnCode {
     if (probe.ticksToLive! > ticksToLiveThreshold) {
@@ -732,7 +667,7 @@ export class ProbeLogic {
     return OK;
   }
 
-  private static boostCreep(probe: Probe, actionToBoost: string, numberOfPartsToBoost: number, tierOfBoost: number): ScreepsReturnCode {
+  static boostCreep(probe: Probe, actionToBoost: string, numberOfPartsToBoost: number, tierOfBoost: number): ScreepsReturnCode {
     if (numberOfPartsToBoost <= probe.getNumberOfBoostedBodyPart(BOOST_PARTS[BOOST_RESOURCES[actionToBoost][tierOfBoost]]))
       return ERR_FULL;
     let laboratory = Mothership.laboratories[probe.room.name];

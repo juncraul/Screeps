@@ -1,5 +1,6 @@
 import { PathLogic } from "PathLogic";
 import { profile } from "./Profiler";
+import { Tasks } from "Tasks";
 
 @profile
 export class Probe {
@@ -89,7 +90,7 @@ export class Probe {
       if (this.memory.useCashedPath) {
         this.goToCashed(source.pos)
       } else {
-        this.goTo(source.pos);
+        this.goTo(source.pos, { stroke: "#00ff00" });
       }
     } else {
       this.creep.memory.lastHarvestTick = Game.time;
@@ -306,9 +307,15 @@ export class Probe {
     return result;
   }
 
-  goTo(destination: RoomPosition, strokeColor: string = "") {
-    if (strokeColor != "") {
-      return this.creep.moveTo(destination, { reusePath: 10, visualizePathStyle: { stroke: strokeColor } });
+  goTo(destination: RoomPosition, movementOption: MovementOption = {}) {
+    if (movementOption.range) {
+      let distanceToDestination = this.creep.pos.getRangeTo(destination);
+      if (distanceToDestination <= movementOption.range) {
+        return NO_ACTION;
+      }
+    }
+    if (movementOption.stroke) {
+      return this.creep.moveTo(destination, { reusePath: 10, visualizePathStyle: { stroke: movementOption.stroke } });
     }
     else {
       return this.creep.moveTo(destination);
@@ -324,8 +331,26 @@ export class Probe {
     return this.creep.moveByPath(this.creep.memory.path);
   };
 
-  goToDifferentRoom(destination: string) {
+  private goToDifferentRoom(destination: string) {
     return this.creep.moveTo(new RoomPosition(25, 25, destination));
+  }
+
+  goToRemoteRoom(roomName: string) {
+    let path = Tasks.getFarAwayRoomPath(roomName);
+    if (path.length == 0) {
+      this.goToDifferentRoom(roomName);
+    } else {
+      let foundCurrentRoom = false;
+      for (let currenRoomIndex in path) {
+        if (foundCurrentRoom) {
+          this.goToDifferentRoom(path[currenRoomIndex]);
+          break;
+        }
+        if (path[currenRoomIndex] == this.room.name) {
+          foundCurrentRoom = true;
+        }
+      }
+    }
   }
 
   getNumberOfBoostedBodyPart(bodyType: BodyPartConstant): number {

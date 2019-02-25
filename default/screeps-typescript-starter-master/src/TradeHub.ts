@@ -62,9 +62,10 @@ export class TradeHub {
     }
     let orders = Tasks.getBuysFromMarket();
     for (let i in orders) {
-      let ordersMarket = TradeHub.getOrdersFromMarket(orders[i].resourceType, orders[i].price, "sell");
+      let ordersMarket = TradeHub.getOrdersFromMarketLessPrice(orders[i].resourceType, orders[i].price, "sell");
       let amountToBuy = orders[i].threshold - this.getResourceAmountFromTerminal(orders[i].resourceType)
-      if (amountToBuy <= 0)
+      if (orders[i].resourceType == RESOURCE_ENERGY && amountToBuy <= 3000
+        || orders[i].resourceType != RESOURCE_ENERGY && amountToBuy <= 300)
         continue;
       //TODO: need to take in consideration the order's availablitity 
       ordersMarket = ordersMarket.sort((a, b) =>
@@ -85,7 +86,32 @@ export class TradeHub {
   }
 
   sellToMarket() {
-
+    if (this.cooldown > 0) {
+      return;
+    }
+    let orders = Tasks.getSellsToMarket();
+    for (let i in orders) {
+      let ordersMarket = TradeHub.getOrdersFromMarketMorePrice(orders[i].resourceType, orders[i].price, "buy");
+      let amountToSell = this.getResourceAmountFromTerminal(orders[i].resourceType) - orders[i].threshold;
+      if (orders[i].resourceType == RESOURCE_ENERGY && amountToSell <= 3000
+        || orders[i].resourceType != RESOURCE_ENERGY && amountToSell <= 300)
+        continue;
+      //TODO: need to take in consideration the order's availablitity 
+      ordersMarket = ordersMarket.sort((a, b) =>
+        TradeHub.getTotalTranCost(amountToSell, b.price, this.room.name, b.roomName!)
+        -
+        TradeHub.getTotalTranCost(amountToSell, a.price, this.room.name, a.roomName!)
+      )
+      if (ordersMarket.length == 0)
+        continue;
+      if (this.getResourceAmountFromTerminal(RESOURCE_ENERGY) < ordersMarket[0].price * amountToSell) {//If terminal has less energy than the transfer cost, go to next order
+        continue;
+      }
+      
+      if (this.completeOrder(ordersMarket[0], amountToSell, this.room.name) == OK) {
+        return;//One order was completed succesfully we can exit as Terminal will go in cooldown.
+      }
+    }
   }
 
   createOrder(type: string, resourceType: MarketResourceConstant, price: number, amount: number) {
@@ -93,16 +119,16 @@ export class TradeHub {
     let storeResult = `Time ${Game.time} Result of the order creation is: ${result} Type:${type} resourceType:${resourceType} price:${price} amount${amount}`;
     Memory.market.push(storeResult);
     if (Memory.market.length > 100)
-      Memory.market.shift()
+      Memory.market.splice(0, Memory.market.length - 100)
     console.log(storeResult)
   }
 
   completeOrder(order: Order, amount: number, targetRoom: string): number {
     let result = Game.market.deal(order.id, amount, targetRoom);
-    let storeResult = `Time ${Game.time} Result of the order deal is: ${result} ID:${order.id} TargetRoom:${targetRoom} Amount:${amount} Price:${order.price} Resource:${order.resourceType} TotalPrice: ${TradeHub.getTotalTranCost(amount, order.price, this.room.name, order.roomName!)}`;
+    let storeResult = `Time ${Game.time} Result of the order deal is: ${result} ID:${order.id} TargetRoom:${targetRoom} Amount:${amount} Price:${order.price} Resource:${order.resourceType} TotalPrice:${amount*order.price} TotalPrice+Travel: ${TradeHub.getTotalTranCost(amount, order.price, this.room.name, order.roomName!)} RemainingAmount:${order.remainingAmount} TotalAmount:${order.totalAmount}`;
     Memory.market.push(storeResult);
     if (Memory.market.length > 100)
-      Memory.market.shift()
+      Memory.market.splice(0, Memory.market.length - 100)
     console.log(storeResult)
     return result;
   }
@@ -115,7 +141,7 @@ export class TradeHub {
   }
 
   static getTotalTranCost(amountToBuy: number, price: number, roomName1: string, roomName2: string): number {
-    return (Game.market.calcTransactionCost(amountToBuy, roomName1, roomName2) + price * amountToBuy)
+    return (Game.market.calcTransactionCost(amountToBuy, roomName1, roomName2) * 0.3 + price * amountToBuy) //0.3 aprox price of energy
   }
 
   static getOrdersFromRoom(room: Room, resource?: ResourceConstant): Order[] {
@@ -126,11 +152,22 @@ export class TradeHub {
     }
   }
 
-  static getOrdersFromMarket(resource: ResourceConstant, price: number, orderType: string): Order[] {
+  static getOrdersFromMarketLessPrice(resource: ResourceConstant, price: number, orderType: string): Order[] {
     let orders = Game.market.getAllOrders({ resourceType: resource, type: orderType });
     let ordersReturn: Order[] = []
     for (let i in orders) {
       if (orders[i].price <= price) {
+        ordersReturn.push(orders[i]);
+      }
+    }
+    return ordersReturn;
+  }
+
+  static getOrdersFromMarketMorePrice(resource: ResourceConstant, price: number, orderType: string): Order[] {
+    let orders = Game.market.getAllOrders({ resourceType: resource, type: orderType });
+    let ordersReturn: Order[] = []
+    for (let i in orders) {
+      if (orders[i].price >= price) {
         ordersReturn.push(orders[i]);
       }
     }

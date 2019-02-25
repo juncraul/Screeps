@@ -155,9 +155,6 @@ export class Mothership {
         return;
       }
       switch (probe.memory.role) {
-        case CreepRole.UPGRADER:
-          ProbeLogic.upgraderLogic(probe);
-          break;
         case CreepRole.BUILDER:
           ProbeLogic.builderLogic(probe);
           break;
@@ -203,7 +200,7 @@ export class Mothership {
     });
 
     for (let i in Mastermind.sites) {
-      Mastermind.sites[i].run(); Game
+      Mastermind.sites[i].run();
     }
   }
 

@@ -11,6 +11,7 @@ export class HarvesterSite extends Site {
   source: Source;
   energyPerTick: number;
   powerNeededForHarvest: number;
+  container: StructureContainer | undefined;
 
   constructor(source: Source) {
     super("HarvesterSite", source.pos, "HarvesterSite-" + JSON.stringify(source.pos));
@@ -18,6 +19,19 @@ export class HarvesterSite extends Site {
     this.source = source;
     this.energyPerTick = 3000 / ENERGY_REGEN_TIME;//TODO: calculate the 3000 number automatically
     this.powerNeededForHarvest = Math.ceil(this.energyPerTick / HARVEST_POWER);
+    this.loadStructures();
+  }
+
+  refresh() {
+    super.refresh();
+    this.miners = this.getProbes();
+  }
+
+  loadStructures() {
+    let structure = GetRoomObjects.getStructuresInRangeOf(this.source.pos, STRUCTURE_CONTAINER, 1)[0];
+    if (structure instanceof StructureContainer) {
+      this.container = structure;
+    }
   }
 
   minerLogic(probe: Probe) {
@@ -29,11 +43,8 @@ export class HarvesterSite extends Site {
     } else {
       let source = this.source;
       if (source) {
-        let containerNextToSource = GetRoomObjects.getStructuresInRangeOf(source.pos, STRUCTURE_CONTAINER, 1)[0];
-        if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
-          if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-            probe.goTo(containerNextToSource.pos);
-          }
+        if (this.container && this.container.pos.lookFor(LOOK_CREEPS).length == 0) {
+          probe.goTo(this.container.pos, { range: 0 });
         } else {
           probe.harvest(source);
         }
@@ -53,7 +64,7 @@ export class HarvesterSite extends Site {
 
   run() {
     this.checkIfMinersAreNeeded();
-
+    
     for (let miner in this.miners) {
       this.minerLogic(this.miners[miner]);
     }

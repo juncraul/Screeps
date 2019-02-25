@@ -56,15 +56,9 @@ interface BoostRequest {
   mineralAmountNeeded?: number;
 }
 
-// `global` extension samples
-declare namespace NodeJS {
-  interface Global {
-    log: any;
-    Profiler: Profiler;
-    MemoryManager: IMemoryManager
-    Mastermind: IMastermind
-  }
-
+interface MovementOption {
+  range?: number;
+  stroke?: string;
 }
 
 interface ISite {
@@ -80,7 +74,20 @@ interface IMastermind {
   sites: ISite[];
 
   initialize(): void;
-  cache(): void
+  refresh(): void;
+  cache(): void;
+}
+
+// `global` extension samples
+declare namespace NodeJS {
+  interface Global {
+    log: any;
+    Profiler: Profiler;
+    MemoryManager: IMemoryManager
+    Mastermind: IMastermind
+  }
+
 }
 
 declare var Mastermind: IMastermind;
+declare const NO_ACTION: 1;

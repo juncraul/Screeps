@@ -9,11 +9,25 @@ import { CreepRole } from "Constants";
 export class ExtractorSite extends Site {
   miners: Probe[];
   mineral: Mineral;
+  container: StructureContainer | undefined;
 
   constructor(mineral: Mineral) {
     super("ExtractorSite", mineral.pos, "ExtractorSite-" + JSON.stringify(mineral.pos));
     this.miners = this.getProbes();
     this.mineral = mineral;
+    this.loadStructures();
+  }
+
+  refresh() {
+    super.refresh();
+    this.miners = this.getProbes();
+  }
+
+  loadStructures() {
+    let structure = GetRoomObjects.getStructuresInRangeOf(this.mineral.pos, STRUCTURE_CONTAINER, 1)[0];
+    if (structure instanceof StructureContainer) {
+      this.container = structure;
+    }
   }
 
   minerLogic(probe: Probe) {
@@ -25,11 +39,8 @@ export class ExtractorSite extends Site {
     } else {
       let mineral = this.mineral;
       if (mineral) {
-        let containerNextToSource = GetRoomObjects.getStructuresInRangeOf(mineral.pos, STRUCTURE_CONTAINER, 1)[0];
-        if (containerNextToSource && containerNextToSource.pos.lookFor(LOOK_CREEPS).length == 0) {
-          if (JSON.stringify(probe.pos) != JSON.stringify(containerNextToSource.pos)) {
-            probe.goTo(containerNextToSource.pos);
-          }
+        if (this.container && this.container.pos.lookFor(LOOK_CREEPS).length == 0) {
+          probe.goTo(this.container.pos, { range: 0 });
         } else {
           probe.harvest(mineral);
         }

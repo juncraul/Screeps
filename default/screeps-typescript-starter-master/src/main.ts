@@ -32,7 +32,8 @@ export const loop = ErrorMapper.wrapLoop(() => {
       console.log("Full reset")
     }
     else {
-
+      Mastermind.refresh();
+      console.log("Refresh")
     }
   }
   catch{

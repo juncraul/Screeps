@@ -12,17 +12,30 @@ export abstract class Site implements ISite {
   private _creeps: Creep[];
 
   constructor(name: string, roomPosition: RoomPosition, id: string) {
+    if (Mastermind.probesAtSites[id] == undefined) {
+      Mastermind.probesAtSites[id] = []
+    }
     this.name = name;
     this.room = Game.rooms[roomPosition.roomName];
     this.id = id;
     this.pos = roomPosition;
     this._creeps = [];
-    for (let i = 0; i < Mastermind.probesAtSites[id].length; i++) {
-      let creep = Game.creeps[Mastermind.probesAtSites[id][i]];
+    this.loadCreeps();
+  }
+
+  refresh() {
+    this._creeps = [];
+    this.loadCreeps();
+  }
+
+  private loadCreeps() {
+    this._creeps = [];
+    for (let i = 0; i < Mastermind.probesAtSites[this.id].length; i++) {
+      let creep = Game.creeps[Mastermind.probesAtSites[this.id][i]];
       if (creep) {
         this._creeps.push(creep)
       } else {
-        _.remove(Mastermind.probesAtSites[id], cr => cr == Mastermind.probesAtSites[id][i]);
+        _.remove(Mastermind.probesAtSites[this.id], cr => cr == Mastermind.probesAtSites[this.id][i]);
         i--;
       }
     }

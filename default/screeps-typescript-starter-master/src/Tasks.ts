@@ -109,7 +109,8 @@ export class Tasks {
 
   public static getSellOrdersToCreate(): OrderSchedule[] {
     return [
-      new OrderSchedule(RESOURCE_ENERGY, 0.149, 10000)
+      new OrderSchedule(RESOURCE_ENERGY, 0.5, 10000),
+      new OrderSchedule(RESOURCE_OXYGEN, 0.299, 2000)
     ];
   }
 
@@ -130,7 +131,9 @@ export class Tasks {
   }
 
   public static getSellsToMarket(): OrderSchedule[] {
-    return [];
+    return [
+      new OrderSchedule(RESOURCE_ENERGY, 0.8, 20000)
+    ];
   }
 
   public static getReactionSchedules(): ReactionSchedule[] {
