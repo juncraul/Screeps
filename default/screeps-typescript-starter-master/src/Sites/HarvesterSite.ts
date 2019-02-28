@@ -12,6 +12,7 @@ export class HarvesterSite extends Site {
   energyPerTick: number;
   powerNeededForHarvest: number;
   container: StructureContainer | undefined;
+  maxHarvesterPositions: number;
 
   constructor(source: Source) {
     super("HarvesterSite", source.pos, "HarvesterSite-" + JSON.stringify(source.pos));
@@ -19,6 +20,7 @@ export class HarvesterSite extends Site {
     this.source = source;
     this.energyPerTick = 3000 / ENERGY_REGEN_TIME;//TODO: calculate the 3000 number automatically
     this.powerNeededForHarvest = Math.ceil(this.energyPerTick / HARVEST_POWER);
+    this.maxHarvesterPositions = this.getMaximumPossibleNumberOfHarvesters()
     this.loadStructures();
   }
 
@@ -31,6 +33,24 @@ export class HarvesterSite extends Site {
     let structure = GetRoomObjects.getStructuresInRangeOf(this.source.pos, STRUCTURE_CONTAINER, 1)[0];
     if (structure instanceof StructureContainer) {
       this.container = structure;
+    }
+  }
+
+  run() {
+    this.checkIfMinersAreNeeded();
+    
+    for (let miner in this.miners) {
+      this.minerLogic(this.miners[miner]);
+    }
+  }
+
+  checkIfMinersAreNeeded() {
+    let totalPowerOnHarvesterSite = 0;
+    for (let i in this.miners) {
+      totalPowerOnHarvesterSite += this.miners[i].getNumberOfBodyPart(WORK);
+    }
+    if (totalPowerOnHarvesterSite < this.powerNeededForHarvest && this.miners.length < this.maxHarvesterPositions) {
+      this.assignAnIdleCreep(CreepRole.HARVESTER);
     }
   }
 
@@ -52,21 +72,13 @@ export class HarvesterSite extends Site {
     }
   }
 
-  checkIfMinersAreNeeded() {
-    let totalPowerOnHarvesterSite = 0;
-    for (let i in this.miners) {
-      totalPowerOnHarvesterSite += this.miners[i].getNumberOfBodyPart(WORK);
-    }
-    if (totalPowerOnHarvesterSite < this.powerNeededForHarvest) {
-      this.assignAnIdleCreep(CreepRole.HARVESTER);
-    }
-  }
-
-  run() {
-    this.checkIfMinersAreNeeded();
-    
-    for (let miner in this.miners) {
-      this.minerLogic(this.miners[miner]);
-    }
+  //Calculate how many harvester positions does the environment allow.
+  getMaximumPossibleNumberOfHarvesters(): number {
+    let maxHarvesters = 0;
+    for (let i = -1; i <= 1; i++)
+      for (let j = -1; j <= 1; j++)
+        if (this.room.lookForAt(LOOK_TERRAIN, this.source.pos.x + i, this.source.pos.y + j)[0] != "wall")
+          maxHarvesters++;
+    return maxHarvesters;
   }
 }

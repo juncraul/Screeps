@@ -21,4 +21,12 @@ export class Helper {
       Memory.Keys[key] = cashed + value;
     }
   }
+
+  public static deleteAllKeysStartingWith(startWith: string) {
+    for (let i in Memory.Keys) {
+      if (i.startsWith(startWith)) {
+        delete Memory.Keys[i]
+      }
+    }
+  }
 }

@@ -13,6 +13,7 @@ interface CreepMemory {
   useCashedPath?: boolean;
   path?: string;
   previousPosition?: RoomPosition;
+  moveDestination?: RoomPosition;
   harvestCooldownXTicks?: number;
   lastHarvestTick?: number;
   resourceMovementTask?: ResourceMovementTask;
@@ -21,6 +22,7 @@ interface CreepMemory {
 }
 
 interface Path {
+  createdOn: number;
   start: RoomPosition;
   finish: RoomPosition;
   path: string
@@ -59,6 +61,13 @@ interface BoostRequest {
 interface MovementOption {
   range?: number;
   stroke?: string;
+}
+
+interface BattleStats {
+  enemy: Creep;
+  firstEncounter: number;
+  numberHits: number;
+  cooldown?: number;
 }
 
 interface ISite {

@@ -18,6 +18,7 @@ export class Laboratory {
   tradeHub: TradeHub;
 
   constructor(labs: StructureLab[], tradeHub: TradeHub) {
+    labs = Laboratory.reorderLabsArray(labs);
     this.room = tradeHub.room;
     this.labs = labs;
     this.labReagentZero = labs[0];
@@ -31,6 +32,10 @@ export class Laboratory {
   runReaction() {
     for (let i in this.labCompounds) {
       if (this.labCompounds[i].id == this.labForBoosting.id && this.boostRequest && this.boostRequest.mineralUsedForBoost) {
+        if (Game.getObjectById(this.boostRequest.probeId) == null) {
+          Helper.setCashedMemory("BoostRequest-" + this.room.name, null);
+          continue;
+        }
         if (this.boostRequest.mineralUsedForBoost == this.labForBoosting.mineralType) {//Perhaps this if is not needed
           let creep = Game.getObjectById(this.boostRequest.probeId);
           if (creep instanceof Creep) {
@@ -100,10 +105,12 @@ export class Laboratory {
             return merchantTask;
           } else {
             for (let j in this.labCompounds) {
-              if (this.labCompounds[j].id == this.labForBoosting.id && this.boostRequest && this.boostRequest.mineralUsedForBoost && this.boostRequest.mineralAmountNeeded) {
+              if (this.labCompounds[j].id == this.labForBoosting.id && this.boostRequest && this.boostRequest.mineralUsedForBoost && this.boostRequest.mineralAmountNeeded && this.tradeHub.getResourceAmountFromTerminal(this.boostRequest.mineralUsedForBoost) >= this.boostRequest.mineralAmountNeeded) {
                 merchantTask = this.getMerchantTaskPerLab(this.labForBoosting, this.boostRequest.mineralUsedForBoost, this.boostRequest.mineralAmountNeeded)
                 if (merchantTask) {
                   return merchantTask;
+                } else if (this.labForBoosting.mineralAmount == 0) {//Cancel boosting as we ran out of minerals
+                  Helper.setCashedMemory("BoostRequest-" + this.room.name, null);
                 }
                 continue;//Don't move any resource out of this lab as is it is scheduled to receive boosting materials
               }
@@ -178,5 +185,31 @@ export class Laboratory {
     console.log("New Boost Request: " + JSON.stringify(newBoostRequest))
     Helper.setCashedMemory("BoostRequest-" + this.room.name, newBoostRequest);
     return OK;
+  }
+
+  //Reorder the labs so that tob two labs are the reageant
+  private static reorderLabsArray(labs: StructureLab[]): StructureLab[] {
+    let returnedLabs: StructureLab[] = [];
+    let minY = 50;
+    let i0 = -1;
+    let i1 = -1
+    for (let i = 0; i < labs.length; i++) {
+      if (labs[i].pos.y < minY) {
+        minY = labs[i].pos.y;
+        i0 = i;
+      }
+      else if (labs[i].pos.y == minY) {
+        i1 = i;
+      }
+    }
+    returnedLabs.push(labs[i0])
+    labs.splice(i0, 1);
+    i1--;
+    if (i1 != -1) {
+      returnedLabs.push(labs[i1])
+      labs.splice(i1, 1);
+    }
+    returnedLabs = returnedLabs.concat(labs);
+    return returnedLabs;
   }
 }

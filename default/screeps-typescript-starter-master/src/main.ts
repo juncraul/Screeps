@@ -6,6 +6,7 @@ import { BaseBuilder } from "BaseBuilder/BaseBuilder";
 
 import * as Profiler from "./Profiler";
 import MM from "Mastermind";
+import { PathLogic } from "PathLogic";
 global.Profiler = Profiler.init();
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
@@ -29,18 +30,16 @@ export const loop = ErrorMapper.wrapLoop(() => {
       delete global.Mastermind;
       global.Mastermind = new MM();
       Mastermind.initialize();
-      console.log("Full reset")
+      PathLogic.cleanUpPaths();
     }
     else {
       Mastermind.refresh();
-      console.log("Refresh")
     }
   }
   catch{
     delete global.Mastermind;
     global.Mastermind = new MM();
     Mastermind.initialize();
-    console.log("Full reset")
   }
 
 

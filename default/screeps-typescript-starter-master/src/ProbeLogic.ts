@@ -435,7 +435,7 @@ export class ProbeLogic {
       probe.goToRemoteRoom(probe.memory.remote!); //TODO: We assume we always have remote here
     }
     else {
-      let enemy = GetRoomObjects.getClosestEnemy(probe);
+      let enemy = GetRoomObjects.getClosestEnemy(probe.pos);
       if (enemy) {
         probe.attack(enemy);
       }
@@ -510,7 +510,7 @@ export class ProbeLogic {
       probe.goToRemoteRoom(flagDecoy.pos.roomName);
     }
     else {
-        probe.goToCashed(flagDecoy.pos);
+        probe.goTo(flagDecoy.pos);
     }
   }
 
@@ -531,6 +531,21 @@ export class ProbeLogic {
     if (!resourceMovementTask) {
       resourceMovementTask = this.getResourceMovementTask(probe);
     }
+    if (!resourceMovementTask) {
+      let towerToSupply = GetRoomObjects.getTowerToSupply(probe);
+      if (towerToSupply && towerToSupply instanceof StructureTower && probe.carryCapacity < storage.store[RESOURCE_ENERGY]) {
+        let towerMissingEnergy = towerToSupply.energyCapacity - towerToSupply.energy;
+        if (towerMissingEnergy > 200) {
+          resourceMovementTask = {
+            amount: towerMissingEnergy < probe.carryCapacity ? towerMissingEnergy : probe.carryCapacity,
+            fromId: storage.id,
+            toId: towerToSupply.id,
+            mineralType: RESOURCE_ENERGY,
+            pickedUp: false,
+          }
+        }
+      }
+    }
 
     if (resourceMovementTask) {
       probe.memory.resourceMovementTask = resourceMovementTask;
@@ -548,9 +563,15 @@ export class ProbeLogic {
             amountFrom = structureFrom.store[resourceMovementTask.mineralType] ? structureFrom.store[resourceMovementTask.mineralType]! : 0
           }
           let amount = amountFrom < resourceMovementTask.amount ? amountFrom : resourceMovementTask.amount;
-          if (probe.withdraw(structureFrom, resourceMovementTask.mineralType, amount) == OK) {
-            probe.memory.resourceMovementTask.pickedUp = true;
-          }
+          let result = probe.withdraw(structureFrom, resourceMovementTask.mineralType, amount);
+          switch (result) {
+            case OK:
+              probe.memory.resourceMovementTask.pickedUp = true;
+              break;
+            case ERR_NOT_ENOUGH_RESOURCES:
+              probe.memory.resourceMovementTask = undefined; //Cancel this task
+              break;
+          } 
         }
         else {//Now move the resource to complete the task
           let result = probe.transfer(structureTo, resourceMovementTask.mineralType, resourceMovementTask.amount);

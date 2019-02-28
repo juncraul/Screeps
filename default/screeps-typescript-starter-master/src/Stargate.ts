@@ -93,6 +93,7 @@ export class Stargate {
         if (originStargates[i] == null && destinationStargates[j] == null) continue;
         if (originStargates[i].energy > 100 && destinationStargates[j].energy < 500) {
           originStargates[i].transferEnergy(destinationStargates[j]);
+          break;
         }
       }
     }

@@ -324,11 +324,11 @@ export class Mothership {
 
   private static spawnCarrier(roomToSpawnFrom: Room): boolean {
     let probeSetupCarrier: ProbeSetup;
-    let probeSetupCarrierOne = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 1 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name });
-    let probeSetupCarrierTwo = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 2 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name });
-    let probeSetupCarrierThree = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 5 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name });
-    let probeSetupCarrierFour = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 10 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name });
-    let probeSetupCarrierElite = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 17 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name });
+    let probeSetupCarrierOne = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 1 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: true });
+    let probeSetupCarrierTwo = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 2 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: true });
+    let probeSetupCarrierThree = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 5 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: true });
+    let probeSetupCarrierFour = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 10 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: true });
+    let probeSetupCarrierElite = new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 17 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: true });
     let carriers = Nexus.getProbes(CreepRole.CARRIER, roomToSpawnFrom.name);
     let carriersAboutToDie = _.filter(carriers, (probe: Probe) => probe.ticksToLive != undefined && probe.ticksToLive < 100);
     let controller = GetRoomObjects.getController(roomToSpawnFrom);
@@ -692,7 +692,7 @@ export class Mothership {
       let probeSetupSoldier = new ProbeSetup({ ordered: true, prefix: [TOUGH, TOUGH, TOUGH], pattern: [ATTACK, MOVE], sizeLimit: 3 }, "soldier-" + roomsToHarvest[i] + "-" + Game.time, { role: CreepRole.SOLDIER, remote: roomsToHarvest[i], homeName: roomToSpawnFrom.name });
       let soldiers = Nexus.getProbes(CreepRole.SOLDIER, roomsToHarvest[i], true);
       let energyToUse = 570;//3 TOUGH - 3 Attack - 6 Move = 570
-      let enemyInRoom = GetRoomObjects.getClosestEnemy(roomToHarvest);
+      let enemyInRoom = GetRoomObjects.getEnemy(roomToHarvest);
 
       if (soldiers.length >= 1 || roomToSpawnFrom.energyAvailable < energyToUse || enemyInRoom == undefined)
         continue;
@@ -802,7 +802,7 @@ export class Mothership {
     let probeSetupSoldier = new ProbeSetup({ ordered: true, pattern: [TOUGH], suffix: [ATTACK, MOVE], sizeLimit: 10 }, "soldier-" + Game.time, { role: CreepRole.SOLDIER, remote: roomToSpawnFrom.name, homeName: roomToSpawnFrom.name });
     let soldiers = Nexus.getProbes(CreepRole.SOLDIER, roomToSpawnFrom.name, true);
     let energyToUse = 230;//10 TOUGH - 1 Attack - 1 Move = 230
-    let enemyInRoom = GetRoomObjects.getClosestEnemy(roomToSpawnFrom);
+    let enemyInRoom = GetRoomObjects.getEnemy(roomToSpawnFrom);
 
     if (soldiers.length >= 1 || roomToSpawnFrom.energyAvailable < energyToUse || enemyInRoom == undefined)
       return false;

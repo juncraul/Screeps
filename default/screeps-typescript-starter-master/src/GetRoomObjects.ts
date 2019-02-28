@@ -326,18 +326,17 @@ export class GetRoomObjects {
   //  return structure instanceof StructureStorage ? structure : null;;
   //}
 
-  public static getClosestEnemy(fromThis: Cannon | Probe | Room): Creep | null {
-    let enemy: Creep | null;
-    if (fromThis instanceof Cannon) {
-      enemy = fromThis.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+  public static getClosestEnemy(fromThis: RoomPosition, containsBodyPart?: BodyPartConstant): Creep | null {
+    if (containsBodyPart) {
+      return fromThis.findClosestByRange(FIND_HOSTILE_CREEPS, {
+        filter: enemy => enemy.body.find(body => body.type == containsBodyPart) != undefined
+      });
     }
-    else if (fromThis instanceof Probe) {
-      enemy = fromThis.pos.findClosestByPath(FIND_HOSTILE_CREEPS);
-    }
-    else {
-      enemy = fromThis.find(FIND_HOSTILE_CREEPS)[0];
-    }
-    return enemy;
+    return fromThis.findClosestByPath(FIND_HOSTILE_CREEPS);
+  }
+
+  public static getEnemy(room: Room): Creep | null {
+    return room.find(FIND_HOSTILE_CREEPS)[0];
   }
 
   public static getClosestDamagedUnit(fromThis: Cannon | Probe): Creep | null {

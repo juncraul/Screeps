@@ -30,6 +30,24 @@ export class ExtractorSite extends Site {
     }
   }
 
+  run() {
+    this.checkIfMinersAreNeeded();
+
+    for (let miner in this.miners) {
+      this.minerLogic(this.miners[miner]);
+    }
+  }
+
+  checkIfMinersAreNeeded() {
+    if (this.miners.length == 0 && this.mineral.mineralAmount > 0) {
+      this.assignAnIdleCreep(CreepRole.HARVESTER);
+    }
+    if (this.mineral.mineralAmount == 0) {
+      for (let i in this.miners)
+        this.freeUpCreep(this.miners[i]);
+    }
+  }
+
   minerLogic(probe: Probe) {
     if (_.sum(probe.carry) === probe.carryCapacity && probe.carryCapacity != 0) {
       let deposit = GetRoomObjects.getClosestEmptyDeposit(probe);
@@ -45,24 +63,6 @@ export class ExtractorSite extends Site {
           probe.harvest(mineral);
         }
       }
-    }
-  }
-
-  checkIfMinersAreNeeded() {
-    if (this.miners.length == 0 && this.mineral.mineralAmount > 0) {
-      this.assignAnIdleCreep(CreepRole.HARVESTER);
-    }
-    if (this.mineral.mineralAmount == 0) {
-      for (let i in this.miners)
-        this.freeUpCreep(this.miners[i]);
-    }
-  }
-
-  run() {
-    this.checkIfMinersAreNeeded();
-
-    for (let miner in this.miners) {
-      this.minerLogic(this.miners[miner]);
     }
   }
 }

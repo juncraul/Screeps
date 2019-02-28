@@ -36,6 +36,20 @@ export class UpgraderSite extends Site {
     this.link = <StructureLink>GetRoomObjects.getStructuresInRangeOf(this.controller.pos, STRUCTURE_LINK, 2)[0];
   }
 
+  run() {
+    this.getAllUpgraders();
+
+    for (let upgrader in this.upgraders) {
+      this.upgraderLogic(this.upgraders[upgrader]);
+    }
+  }
+
+  getAllUpgraders() {
+    if (this.upgraders.length < 2) {
+      this.assignAnIdleCreep(CreepRole.UPGRADER);//TODO: change this somehow very ineficient
+    }
+  }
+
   upgraderLogic(probe: Probe) {
     //Move probe back in home base in case it wonder off
     if (probe.room.name != probe.memory.homeName) {
@@ -70,15 +84,19 @@ export class UpgraderSite extends Site {
       probe.upgradeController(this.controller);
     }
     if (probe.memory.isGathering) {
+      //Recharge from link
+      if (this.link && this.link.energy > 0) {
+        probe.withdraw(this.link, RESOURCE_ENERGY)
+        return;
+      }
+
       //Recharge from container
       if (this.container && this.container.store[RESOURCE_ENERGY] > 0) {
         probe.withdraw(this.container, RESOURCE_ENERGY)
         return;
       }
 
-      //Recharge from link
-      if (this.link && this.link.energy > 0) {
-        probe.withdraw(this.link, RESOURCE_ENERGY)
+      if (this.controller.level > 3) {//After level 3 don't allow upgraders to take resources from somewhere else
         return;
       }
 
@@ -88,25 +106,13 @@ export class UpgraderSite extends Site {
         probe.withdraw(deposit, RESOURCE_ENERGY);
         return;
       }
-
+      
       //Find dropped resources
       let droppedResource = GetRoomObjects.getDroppedResource(probe.pos);
       if (droppedResource) {
         probe.pickup(droppedResource);
         return;
       }
-    }
-  }
-
-  getAllUpgraders() {
-    this.assignAnIdleCreep(CreepRole.UPGRADER);
-  }
-
-  run() {
-    this.getAllUpgraders();
-    
-    for (let upgrader in this.upgraders) {
-      this.upgraderLogic(this.upgraders[upgrader]);
     }
   }
 }

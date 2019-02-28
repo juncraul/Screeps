@@ -7,6 +7,7 @@ export class Cannon {
   energyCapacity: number;
   tower: StructureTower;
   pos: RoomPosition;
+  battleStats?: BattleStats;
 
 
   constructor(tower: StructureTower) {
@@ -33,33 +34,59 @@ export class Cannon {
 
 
   public cannonLogic(): void {
-    let enemy = GetRoomObjects.getClosestEnemy(this);
-    if (enemy) {
-      this.attack(enemy);
+    //Take care of enemies
+    let enemy = GetRoomObjects.getClosestEnemy(this.pos, HEAL);//Kill healers first
+    if (!enemy) {
+      enemy = GetRoomObjects.getClosestEnemy(this.pos);
     }
-    else {
-      let damagedUnit = GetRoomObjects.getClosestDamagedUnit(this);
-      if (damagedUnit) {
-        this.heal(damagedUnit);
-      }
-      else if (this.energy > this.energyCapacity * 0.5) {
-        let structure = GetRoomObjects.getClosestStructureToRepairByRange(this.pos, 0.5);
-        if (structure) {
-          this.repair(structure);
+    if (enemy) {
+      //TODO: do in such a way so we don't keep attacking creeps when attacking has no effect
+      //if (this.battleStats && this.battleStats.enemy.id == enemy.id && this.battleStats.numberHits > 5 && this.battleStats.enemy.hits > this.battleStats.enemy.hitsMax * 0.8) {
+      //  this.battleStats.cooldown = 5;
+      //  return;
+      //}
+      let result = this.attack(enemy);
+      if (!this.battleStats || (this.battleStats && this.battleStats.enemy.id != enemy.id)) {
+        this.battleStats = {
+          enemy: enemy,
+          firstEncounter: Game.time,
+          numberHits: result == 0 ? 1 : 0
         }
-        else {
-          let structure = GetRoomObjects.getClosestStructureToRepairByRange(this.pos, 0.8);
-          if (structure) {
-            this.repair(structure);
-          }
-          else if (Game.time % 10 < 5) {
-            let structure = GetRoomObjects.getClosestStructureToRepairByRange(this.pos, 0.8, true);
-            if (structure) {
-              this.repair(structure);
-            }
-          }
-        }
+      } else {
+        this.battleStats.numberHits++;
       }
+      return;
+    }
+
+    //Heal friendly creeps
+    let damagedUnit = GetRoomObjects.getClosestDamagedUnit(this);
+    if (damagedUnit) {
+      this.heal(damagedUnit);
+      return;
+    }
+
+    //Check if cannon has enough energy and that we are not at limit of the cpu
+    if (this.energy <= this.energyCapacity * 0.5 || Game.cpu.bucket < 1000)
+      return;
+
+    //Repair very damaged structures
+    let structure = GetRoomObjects.getClosestStructureToRepairByRange(this.pos, 0.5);
+    if (structure) {
+      this.repair(structure);
+    }
+
+    //Repair damaged structures
+    structure = GetRoomObjects.getClosestStructureToRepairByRange(this.pos, 0.8);
+    if (structure) {
+      this.repair(structure);
+    }
+
+    //Do wall repairs rarely
+    if (Game.time % 10 < 5)
+      return
+    structure = GetRoomObjects.getClosestStructureToRepairByRange(this.pos, 0.8, true);
+    if (structure) {
+      this.repair(structure);
     }
   }
 }
