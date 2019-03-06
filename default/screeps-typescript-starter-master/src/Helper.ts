@@ -29,4 +29,8 @@ export class Helper {
       }
     }
   }
+
+  public static say(text: string, roomPos: RoomPosition) {
+    Game.rooms[roomPos.roomName].visual.text(text, roomPos);
+  }
 }

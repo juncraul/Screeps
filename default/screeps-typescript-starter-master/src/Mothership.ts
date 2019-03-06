@@ -379,7 +379,7 @@ export class Mothership {
       probeSetupCarrier = probeSetupCarrierOne;
     }
     else {
-      if (carriers.length == 1 && carryBodyParts <= 5) {//We have a weak carry build a level 3 one
+      if (carriers.length == 1 && carryBodyParts <= 5 && roomToSpawnFrom.energyCapacityAvailable > 500) {//We have a weak carry build a level 3 one
         energyToUse = 500;//5 Carry; 5 Move
         probeSetupCarrier = probeSetupCarrierThree;
       }

@@ -131,6 +131,8 @@ export class BaseBuilder {
     let labCoordinates = layout[controllerLevel]!.buildings["lab"].pos;
 
     this.buildBuildingType(anchor, spawnCoordinates, "Sp", STRUCTURE_SPAWN, previewInsteadOfBuild, layout);
+    if (GetRoomObjects.getSpawn(Game.rooms[anchor.roomName]) == null)//Don't build the other stuff while Spawn is not built yet
+      return;
     this.buildBuildingType(anchor, roadCoordinates, "Ro", STRUCTURE_ROAD, previewInsteadOfBuild, layout);
     this.buildBuildingType(anchor, extensionCoordinates, "Ex", STRUCTURE_EXTENSION, previewInsteadOfBuild, layout);
     this.buildBuildingType(anchor, wallCoordinates, "Wa", STRUCTURE_WALL, previewInsteadOfBuild, layout);

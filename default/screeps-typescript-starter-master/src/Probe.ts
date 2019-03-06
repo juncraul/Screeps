@@ -246,7 +246,7 @@ export class Probe {
   goTo(destination: RoomPosition, movementOption: MovementOption = {}) {
     if (this.memory.useCashedPath) {
       let creepInSamePosition = JSON.stringify(this.creep.memory.previousPosition) == JSON.stringify(this.creep.pos);
-      let newDestination = JSON.stringify(this.creep.memory.moveDestination) == JSON.stringify(destination);
+      let newDestination = JSON.stringify(this.creep.memory.moveDestination) != JSON.stringify(destination);
       if (!this.creep.memory.path || creepInSamePosition) {
         this.creep.memory.path = PathLogic.getPath(this.creep.pos, destination, newDestination ? false : creepInSamePosition, this.id == "put a real id");
         this.creep.memory.moveDestination = destination;

@@ -57,8 +57,13 @@ export class UpgraderSite extends Site {
       return;
     }
 
-    //Boost the creep
-    if (this.controller.level >= 6 && ProbeLogic.boostCreep(probe, BoostActionType.UPGRADE, 5, 1) == OK) {
+    //Boost the creep for level 6
+    if (!probe.spawning && this.controller.level == 6 && ProbeLogic.boostCreep(probe, BoostActionType.UPGRADE, 2, 1) == OK) {
+      return;
+    }
+
+    //Boost the creep for level 7 and 8
+    if (!probe.spawning && this.controller.level >= 7 && ProbeLogic.boostCreep(probe, BoostActionType.UPGRADE, 4, 1) == OK) {
       return;
     }
 

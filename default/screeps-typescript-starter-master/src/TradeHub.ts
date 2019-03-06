@@ -1,5 +1,6 @@
 import { Tasks } from "Tasks";
 import { profile } from "./Profiler";
+import { Helper } from "Helper";
 
 @profile
 export class TradeHub {
@@ -61,6 +62,7 @@ export class TradeHub {
       return;
     }
     let orders = Tasks.getBuysFromMarket();
+    let lowEnergy = false;
     for (let i in orders) {
       let ordersMarket = TradeHub.getOrdersFromMarketLessPrice(orders[i].resourceType, orders[i].price, "sell");
       let amountToBuy = orders[i].threshold - this.getResourceAmountFromTerminal(orders[i].resourceType)
@@ -75,13 +77,19 @@ export class TradeHub {
       )
       if (ordersMarket.length == 0)
         continue;
-      if (this.getResourceAmountFromTerminal(RESOURCE_ENERGY) < ordersMarket[0].price * amountToBuy) {//If terminal has less energy than the transfer cost, go to next order
+
+      //If terminal has less energy than the transfer cost, go to next order
+      if (this.getResourceAmountFromTerminal(RESOURCE_ENERGY) < Game.market.calcTransactionCost(amountToBuy, ordersMarket[0].roomName!, this.room.name)) {
+        lowEnergy = true;
         continue;
       }
       
       if (this.completeOrder(ordersMarket[0], amountToBuy, this.room.name) == OK) {
         return;//One order was complited succesfully we can exit as Terminal will go in cooldown.
       }
+    }
+    if (lowEnergy) {
+      Helper.say("Low Energy", this.pos);
     }
   }
 
@@ -90,6 +98,7 @@ export class TradeHub {
       return;
     }
     let orders = Tasks.getSellsToMarket();
+    let lowEnergy = false;
     for (let i in orders) {
       let ordersMarket = TradeHub.getOrdersFromMarketMorePrice(orders[i].resourceType, orders[i].price, "buy");
       let amountToSell = this.getResourceAmountFromTerminal(orders[i].resourceType) - orders[i].threshold;
@@ -104,13 +113,19 @@ export class TradeHub {
       )
       if (ordersMarket.length == 0)
         continue;
-      if (this.getResourceAmountFromTerminal(RESOURCE_ENERGY) < ordersMarket[0].price * amountToSell) {//If terminal has less energy than the transfer cost, go to next order
+
+      //If terminal has less energy than the transfer cost, go to next order
+      if (this.getResourceAmountFromTerminal(RESOURCE_ENERGY) < Game.market.calcTransactionCost(amountToSell, ordersMarket[0].roomName!, this.room.name)) {
+        lowEnergy = true;
         continue;
       }
       
       if (this.completeOrder(ordersMarket[0], amountToSell, this.room.name) == OK) {
         return;//One order was completed succesfully we can exit as Terminal will go in cooldown.
       }
+    }
+    if (lowEnergy) {
+      Helper.say("Low Energy", this.pos);
     }
   }
 

@@ -83,6 +83,7 @@ export class MemoryManager implements IMemoryManager {
   }
 
   saveRoomsToMemory() {
+    //TODO: This is not great, should get all rooms in a different way
     let rooms = Tasks.getRoomsToHarvest();
     for (let roomIndex in rooms) {
       let room = Game.rooms[rooms[roomIndex]];

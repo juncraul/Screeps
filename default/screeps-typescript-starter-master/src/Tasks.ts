@@ -11,7 +11,7 @@ export class Tasks {
       case "shard2"://Public
         return ["W33S54", "W32S55", "W31S55", "W32S56", "W34S53", "W32S53", "W33S52", "W32S54", "W31S53", "W34S52", "W34S51", "W31S51"];
       case "shard3"://Public Free-Subscription
-        return [];
+        return ["E31N46", "E32N44"];
       default:
         return [];
     }
@@ -24,9 +24,7 @@ export class Tasks {
       case "shard2"://Public
         return [];
       case "shard3"://Public Free-Subscription
-        return ["E32N44",
-          //"E32N45",
-          "E31N46"];
+        return ["E32N44"];
       default:
         return [];
     }
@@ -60,6 +58,8 @@ export class Tasks {
         }
       case "shard3"://Public Free-Subscription
         switch (room.name) {
+          case "E31N46":
+            return ["E32N44"];
           default:
             return []
         }
