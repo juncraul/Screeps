@@ -356,6 +356,9 @@ export class Mothership {
       case 2://550 Energy available
         energyToUse = 200;//2 Carry; 2 Move
         probeSetupCarrier = probeSetupCarrierTwo;
+        if (deposit.length == 0) { //Don't build any carrier if we don't have a container anyway
+          return false;            //For future levels we drop resource on the ground, so will always need carries
+        }
         break;
       case 3://800 Energy available
         energyToUse = 500;//5 Carry; 5 Move

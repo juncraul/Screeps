@@ -4,6 +4,7 @@ import { Probe } from "Probe";
 import { GetRoomObjects } from "GetRoomObjects";
 import { MY_SIGNATURE, BoostActionType, CreepRole } from "Constants";
 import { ProbeLogic } from "ProbeLogic";
+import { Debugging, DebuggingType } from "Debugging";
 
 
 @profile
@@ -40,7 +41,7 @@ export class UpgraderSite extends Site {
     this.getAllUpgraders();
 
     for (let upgrader in this.upgraders) {
-      this.upgraderLogic(this.upgraders[upgrader]);
+      Debugging.log(`Upgrader ${this.upgraders[upgrader].id} returned value: ${this.upgraderLogic(this.upgraders[upgrader])}`, DebuggingType.UPGRADER);
     }
   }
 
@@ -54,17 +55,17 @@ export class UpgraderSite extends Site {
     //Move probe back in home base in case it wonder off
     if (probe.room.name != probe.memory.homeName) {
       probe.goToRemoteRoom(probe.memory.homeName);
-      return;
+      return 1;
     }
 
     //Boost the creep for level 6
     if (!probe.spawning && this.controller.level == 6 && ProbeLogic.boostCreep(probe, BoostActionType.UPGRADE, 2, 1) == OK) {
-      return;
+      return 2;
     }
 
     //Boost the creep for level 7 and 8
     if (!probe.spawning && this.controller.level >= 7 && ProbeLogic.boostCreep(probe, BoostActionType.UPGRADE, 4, 1) == OK) {
-      return;
+      return 3;
     }
 
     //Sign the controller every now and then
@@ -92,13 +93,13 @@ export class UpgraderSite extends Site {
       //Recharge from link
       if (this.link && this.link.energy > 0) {
         probe.withdraw(this.link, RESOURCE_ENERGY)
-        return;
+        return 4;
       }
 
       //Recharge from container
       if (this.container && this.container.store[RESOURCE_ENERGY] > 0) {
         probe.withdraw(this.container, RESOURCE_ENERGY)
-        return;
+        return 5;
       }
 
       if (this.controller.level > 3) {//After level 3 don't allow upgraders to take resources from somewhere else
@@ -106,18 +107,28 @@ export class UpgraderSite extends Site {
       }
 
       //Find other deposits
-      let deposit = GetRoomObjects.getClosestFilledDeposit(probe, false, false, false, 300);
+      let deposit = GetRoomObjects.getClosestFilledDeposit(probe, false, false, true, 300);
       if (deposit) {
         probe.withdraw(deposit, RESOURCE_ENERGY);
-        return;
+        return 6;
       }
       
       //Find dropped resources
       let droppedResource = GetRoomObjects.getDroppedResource(probe.pos);
       if (droppedResource) {
         probe.pickup(droppedResource);
-        return;
+        return 7;
+      }
+
+      //Get from spawner if controller level is 1/2
+      if (this.controller.level <= 2) {
+        deposit = GetRoomObjects.getClosestFilledDeposit(probe, false, false, false, 200);
+        if (deposit) {
+          probe.withdraw(deposit, RESOURCE_ENERGY);
+          return 8;
+        }
       }
     }
+    return -1;
   }
 }

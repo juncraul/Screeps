@@ -5,12 +5,12 @@ import { GetRoomObjects } from "GetRoomObjects";
 
 //Flags: Primary - Secondary
 //Layout construction, flag must also be named "ConstructionSite-*" where * is number from 0 to 9
-//WHITE - WHITE Build Layout Sieve
-//WHITE - GREY  Build Layout Rooftop
-//WHITE - BROWN Build Layout Reverse/Rooftop
-//GREY  - WHITE Preview Layout Sieve
-//GREY  - GREY  Preview Layout Rooftop
-//GREY  - BROWN Preview Layout Reverse/Rooftop
+//WHITE - WHITE Preview Layout Sieve
+//WHITE - GREY  Preview Layout Rooftop
+//WHITE - BROWN Preview Layout Reverse/Rooftop
+//GREY  - WHITE Build Layout Sieve
+//GREY  - GREY  Build Layout Rooftop
+//GREY  - BROWN Build Layout Reverse/Rooftop
 
 //BROWN - WHITE Build Rampart instead of wall
 
@@ -59,7 +59,7 @@ export class BaseBuilder {
         default:
           continue;
       }
-      if (flag.color == COLOR_WHITE && Game.time % 5 == 0) {//preview only once every 5th tick, might need rethinking
+      if (flag.color == COLOR_WHITE) {
         this.buildBase(flag.pos, layoutToBeUsed, 4, true);
         this.createWall(Game.rooms[flag.pos.roomName], true);
       } else if (flag.color == COLOR_GREY && Game.time % 10 == 0) {//Construct only once every 10th tick

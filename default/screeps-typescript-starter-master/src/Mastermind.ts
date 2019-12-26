@@ -30,8 +30,9 @@ export default class Mastermind implements IMastermind {
       if (probesAtSites) {
         this.probesAtSites = probesAtSites;
       }
-      for (let i in sources) {
-        let miningSite = new HarvesterSite(sources[i]);
+      for (let j in sources) {
+        console.log(`Creating HarvesterSite in ${myRooms[i]}`)
+        let miningSite = new HarvesterSite(sources[j]);
         this.sites.push(miningSite);
       }
       if (mineral) {

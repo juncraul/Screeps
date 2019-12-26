@@ -38,7 +38,8 @@
     "rollup-plugin-typescript2": "^0.16.1",
     "tslint": "^5.9.1",
     "tslint-config-prettier": "^1.14.0",
-    "typescript": "^2.9.2"
+    "typescript": "^2.9.2",
+    "nan": "^2.8.0"
   },
   "dependencies": {
     "source-map": "~0.6.1"

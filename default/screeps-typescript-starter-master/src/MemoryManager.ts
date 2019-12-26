@@ -11,6 +11,9 @@ export class MemoryManager implements IMemoryManager {
     if (Memory.Keys == undefined) {
       Memory.Keys = new Object();
     }
+    if (Memory.Debugging == undefined) {
+      Memory.Debugging = new Object();
+    }
     //this.initializeContainers();
     if (Game.time % 5 == 0) {
       this.saveRoomsToMemory();

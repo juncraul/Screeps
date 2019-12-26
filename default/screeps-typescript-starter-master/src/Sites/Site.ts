@@ -47,8 +47,9 @@ export abstract class Site implements ISite {
 
   protected assignAnIdleCreep(role: string): void {
     // Find an idle creep
-    let idleCreep = _.filter(Game.creeps, (creep) => creep.memory.siteId == undefined && creep.memory.role == role && creep.memory.homeName == this.room.name)[0]
+    let idleCreep = _.filter(Game.creeps, (creep) => !creep.memory.siteId && creep.memory.role == role && creep.memory.homeName == this.room.name)[0]
     if (idleCreep) {
+      console.log(`We have found Idle Creep, now will bind creep <${idleCreep}> with role <${role}> to site <${this.id}>`)
       bindCreepToSite(idleCreep, this);
     }
   }

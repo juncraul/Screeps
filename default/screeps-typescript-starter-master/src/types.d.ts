@@ -33,6 +33,8 @@ interface Memory {
   log: any;
   paths: Path[];
   market: string[];
+  Keys: any; //TODO: Find a proper type for this
+  Debugging: any;
 }
 
 interface RoomMemory {
