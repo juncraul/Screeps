@@ -11,7 +11,7 @@ export class Tasks {
       case "shard2"://Public
         return ["W33S54", "W32S55", "W31S55", "W32S56", "W34S53", "W32S53", "W33S52", "W32S54", "W31S53", "W34S52", "W34S51", "W31S51"];
       case "shard3"://Public Free-Subscription
-        return ["W8S22"];
+        return ["W29S34"];
       default:
         return [];
     }

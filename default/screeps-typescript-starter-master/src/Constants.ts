@@ -181,3 +181,15 @@ export const enum FlagName {
   KEEPER_SLAYER = "KeeperSlayer", //Indicate that we want to build keeper slayer
   KEEPER_SLAYER_SPAWNER = "KeeperSlayerSpawner" //Indicate from where to build a keeper slayer
 }
+
+export const enum SPAWN_RESULT_CODES {
+  OK,
+  NO_CONTROLLER,
+  NO_DEPOSIT_STRUCTURE_CONSTRUCTED,
+  TOO_MANY_CREEPS,
+  NEED_OTHER_TYPES_OF_CREEPS,
+  PLENTLY_ALIVE_CREEPS,
+  CPU_BUCKET_LOW,
+  NOT_NEEDED,
+  NOT_NEEDED_AT_THIS_LEVEL
+}

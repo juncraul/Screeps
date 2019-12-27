@@ -1,6 +1,7 @@
 import { PathLogic } from "PathLogic";
 import { profile } from "./Profiler";
 import { Tasks } from "Tasks";
+import { ProbeSetup } from "ProbeSetup";
 
 @profile
 export class Probe {
@@ -48,6 +49,10 @@ export class Probe {
     this.ticksToLive = creep.ticksToLive;
     //this.lifetime = this.getBodyparts(CLAIM) > 0 ? CREEP_CLAIM_LIFE_TIME : CREEP_LIFE_TIME;
     this.actionLog = {};
+  }
+
+  getProbeSetup(): ProbeSetup | null {
+    return null;
   }
 
   build(structure: ConstructionSite) {

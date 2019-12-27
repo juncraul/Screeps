@@ -1,5 +1,6 @@
 export const enum DebuggingType {
-  UPGRADER = "upgrader"
+  UPGRADER = "upgrader",
+  SPAWNING = "spawning"
 }
 
 export class Debugging {
