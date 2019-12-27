@@ -6,7 +6,7 @@ import { GetRoomObjects } from "GetRoomObjects";
 
 export class ProbeHarvester extends Probe {
 
-  static getProbeSetup(controllerLevel: number, roomToSpawnFrom: Room) {
+  static getProbeSetup(controllerLevel: number, roomToSpawnFrom: Room): ProbeSetup {
     switch (controllerLevel) {
       case 1:
         return new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 1 }, "harvester-" + Game.time, { role: CreepRole.HARVESTER, homeName: roomToSpawnFrom.name });

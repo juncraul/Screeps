@@ -7,7 +7,7 @@ import { Tasks } from "Tasks";
 
 export class ProbeLongDistanceHarvester extends Probe {
 
-  static getProbeSetup(controllerLevel: number, roomToSpawnFrom: Room, roomToHarvest: Room) {
+  static getProbeSetup(controllerLevel: number, roomToSpawnFrom: Room, roomToHarvest: Room): ProbeSetup {
     switch (controllerLevel) {
       case 1:
       case 2:
@@ -19,6 +19,9 @@ export class ProbeLongDistanceHarvester extends Probe {
   }
 
   static spawnLongDistanceHarvester(roomToSpawnFrom: Room, roomsToHarvest: string[]): SPAWN_RESULT_CODES {
+    let controller = GetRoomObjects.getController(roomToSpawnFrom);
+    if (!controller)
+      return SPAWN_RESULT_CODES.NO_CONTROLLER;
     for (let i = 0; i < roomsToHarvest.length; i++) {
       let roomConnections = Tasks.getRoomConnections(roomToSpawnFrom);
       if (!roomConnections.includes(roomsToHarvest[i]))
@@ -27,22 +30,17 @@ export class ProbeLongDistanceHarvester extends Probe {
       let roomToHarvest = Game.rooms[roomsToHarvest[i]];
       let sources = roomToHarvest != null ? roomToHarvest.find(FIND_SOURCES).length : 1;
       let workBodyParts = Probe.getActiveBodyPartsFromArrayOfProbes(harvesters, WORK);
-      let controller = GetRoomObjects.getController(roomToSpawnFrom);
       let remoteController = roomToHarvest != null ? GetRoomObjects.getController(roomToHarvest) : null;
       let roomNeedsClaimed = roomToHarvest != null ? Tasks.getRoomsToClaim().includes(roomToHarvest.name) : false;
       let spawnerInRemote = roomToHarvest != null ? GetRoomObjects.getSpawn(roomToHarvest) : null;
       let energyToUse: number;
       let levelBlueprintToBuild: number;
+      let probeSetupLongDistanceHarvester = ProbeLongDistanceHarvester.getProbeSetup(controller.level, roomToSpawnFrom, roomToHarvest);
 
-      if (!controller) {
-        return SPAWN_RESULT_CODES.NO_CONTROLLER;
-      }
-      else {
-        levelBlueprintToBuild = Game.rooms[roomToSpawnFrom.name].find(FIND_CONSTRUCTION_SITES, { filter: structure => structure.structureType == STRUCTURE_EXTENSION }).length == 0
-          ? controller.level//No extenstions to construct, set blueprint as current controller level.
-          : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level.
-      }//This substruction will not happen when controller.level == 1 because there are no extensions to be built at that time.
-      let probeSetupLongDistanceHarvester = this.getProbeSetup(controller.level, roomToSpawnFrom, roomToHarvest);
+      levelBlueprintToBuild = Game.rooms[roomToSpawnFrom.name].find(FIND_CONSTRUCTION_SITES, { filter: structure => structure.structureType == STRUCTURE_EXTENSION }).length == 0
+        ? controller.level//No extenstions to construct, set blueprint as current controller level.
+        : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level.
+      //This substruction will not happen when controller.level == 1 because there are no extensions to be built at that time.
       switch (levelBlueprintToBuild) {
         case 1:
         case 2:

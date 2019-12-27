@@ -6,18 +6,18 @@ import { GetRoomObjects } from "GetRoomObjects";
 
 export class ProbeCarrier extends Probe {
 
-  static getProbeSetup(controllerLevel: number, roomToSpawnFrom: Room) {
+  static getProbeSetup(controllerLevel: number, roomToSpawnFrom: Room): ProbeSetup {
     switch (controllerLevel) {
       case 1:
-        return new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 1 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: true });
+        return new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 1 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: false });
       case 2:
-        return new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 2 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: true });
+        return new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 2 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: false });
       case 3:
-        return new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 5 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: true });
+        return new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 5 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: false });
       case 4:
-        return new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 10 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: true });
+        return new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 10 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: false });
       default:
-        return new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 17 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: true });
+        return new ProbeSetup({ ordered: true, pattern: [CARRY, MOVE], sizeLimit: 17 }, "carrier-" + Game.time, { role: CreepRole.CARRIER, homeName: roomToSpawnFrom.name, useCashedPath: false });
     }
   }
 
@@ -38,7 +38,7 @@ export class ProbeCarrier extends Probe {
         ? controller.level//No extenstions to construct, set blueprint as current controller level.
         : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level.
     }//This substruction will not happen when controller.level == 1 because there are no extensions to be built at that time.
-    let probeSetupCarrier = this.getProbeSetup(controller.level, roomToSpawnFrom);
+    let probeSetupCarrier = ProbeCarrier.getProbeSetup(controller.level, roomToSpawnFrom);
     switch (levelBlueprintToBuild) {
       case 1://300 Energy avilable
         energyToUse = 100;//1 Carry; 1 Move
@@ -68,12 +68,12 @@ export class ProbeCarrier extends Probe {
     //Emergency situation with no carriers. Quickly build a low carrier
     if (carriers.length == 0 && roomToSpawnFrom.energyAvailable < energyToUse) {
       energyToUse = 100;//1 Carry; 1 Move
-      probeSetupCarrier = this.getProbeSetup(1, roomToSpawnFrom);;
+      probeSetupCarrier = ProbeCarrier.getProbeSetup(1, roomToSpawnFrom);;
     }
     else {
       if (carriers.length == 1 && carryBodyParts <= 5 && roomToSpawnFrom.energyCapacityAvailable > 500) {//We have a weak carry build a level 3 one
         energyToUse = 500;//5 Carry; 5 Move
-        probeSetupCarrier = this.getProbeSetup(3, roomToSpawnFrom);;
+        probeSetupCarrier = ProbeCarrier.getProbeSetup(3, roomToSpawnFrom);;
       }
     }
 

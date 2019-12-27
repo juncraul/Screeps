@@ -6,7 +6,7 @@ import { GetRoomObjects } from "GetRoomObjects";
 
 export class ProbeUpgrader extends Probe {
 
-  static getProbeSetup(controllerLevel: number, roomToSpawnFrom: Room) {
+  static getProbeSetup(controllerLevel: number, roomToSpawnFrom: Room): ProbeSetup {
     switch (controllerLevel) {
       case 1:
         return new ProbeSetup({ ordered: true, pattern: [WORK, CARRY, MOVE], sizeLimit: 1 }, "upgrader-" + Game.time, { role: CreepRole.UPGRADER, homeName: roomToSpawnFrom.name });
@@ -42,7 +42,7 @@ export class ProbeUpgrader extends Probe {
         ? controller.level//No extenstions to construct, set blueprint as current controller level.
         : controller.level - 1;//Extensions are pending to be constucted, set blueprint as previous controller level.
     }//This substruction will not happen when controller.level == 1 because there are no extensions to be built at that time.
-    let probeSetupUpgrader = this.getProbeSetup(controller.level, roomToSpawnFrom);
+    let probeSetupUpgrader = ProbeUpgrader.getProbeSetup(controller.level, roomToSpawnFrom);
     switch (levelBlueprintToBuild) {
       case 1://300 Energy avilable
         energyToUse = 200;//1 Work; 1 Carry; 1 Move

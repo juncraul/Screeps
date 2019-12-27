@@ -46,9 +46,7 @@ export class UpgraderSite extends Site {
   }
 
   getAllUpgraders() {
-    if (this.upgraders.length < 2) {
-      this.assignAnIdleCreep(CreepRole.UPGRADER);//TODO: change this somehow very ineficient
-    }
+    this.assignAnIdleCreep(CreepRole.UPGRADER);//TODO: change this somehow very ineficient
   }
 
   upgraderLogic(probe: Probe) {
