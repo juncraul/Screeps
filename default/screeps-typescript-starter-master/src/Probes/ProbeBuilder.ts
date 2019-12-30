@@ -25,7 +25,7 @@ export class ProbeBuilder extends Probe {
       return SPAWN_RESULT_CODES.NO_CONTROLLER;
     if (constructionSites.length == 0)
       return SPAWN_RESULT_CODES.NOT_NEEDED;
-    if (builders.length >= 1)
+    if (builders.length >= 2)
       return SPAWN_RESULT_CODES.TOO_MANY_CREEPS;
 
     let probeSetupBuilder = ProbeBuilder.getProbeSetup(controller.level, roomToSpawnFrom);

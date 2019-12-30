@@ -435,7 +435,7 @@ export class ProbeLogic {
       probe.goToRemoteRoom(probe.memory.remote!); //TODO: We assume we always have remote here
     }
     else {
-      let enemy = GetRoomObjects.getClosestEnemy(probe.pos);
+      let enemy = GetRoomObjects.getClosestEnemyByPath(probe.pos);
       if (enemy) {
         probe.attack(enemy);
       }

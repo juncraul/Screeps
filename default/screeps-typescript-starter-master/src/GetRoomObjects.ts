@@ -326,9 +326,18 @@ export class GetRoomObjects {
   //  return structure instanceof StructureStorage ? structure : null;;
   //}
 
-  public static getClosestEnemy(fromThis: RoomPosition, containsBodyPart?: BodyPartConstant): Creep | null {
+  public static getClosestEnemyByRange(fromThis: RoomPosition, containsBodyPart?: BodyPartConstant): Creep | null {
     if (containsBodyPart) {
       return fromThis.findClosestByRange(FIND_HOSTILE_CREEPS, {
+        filter: enemy => enemy.body.find(body => body.type == containsBodyPart) != undefined
+      });
+    }
+    return fromThis.findClosestByRange(FIND_HOSTILE_CREEPS);
+  }
+
+  public static getClosestEnemyByPath(fromThis: RoomPosition, containsBodyPart?: BodyPartConstant): Creep | null {
+    if (containsBodyPart) {
+      return fromThis.findClosestByPath(FIND_HOSTILE_CREEPS, {
         filter: enemy => enemy.body.find(body => body.type == containsBodyPart) != undefined
       });
     }

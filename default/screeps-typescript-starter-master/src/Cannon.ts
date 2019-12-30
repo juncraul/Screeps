@@ -35,9 +35,9 @@ export class Cannon {
 
   public cannonLogic(): void {
     //Take care of enemies
-    let enemy = GetRoomObjects.getClosestEnemy(this.pos, HEAL);//Kill healers first
+    let enemy = GetRoomObjects.getClosestEnemyByRange(this.pos, HEAL);//Kill healers first
     if (!enemy) {
-      enemy = GetRoomObjects.getClosestEnemy(this.pos);
+      enemy = GetRoomObjects.getClosestEnemyByRange(this.pos);
     }
     if (enemy) {
       //TODO: do in such a way so we don't keep attacking creeps when attacking has no effect

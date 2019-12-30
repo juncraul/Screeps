@@ -85,7 +85,7 @@ export class BaseBuilder {
         default:
           continue;
       }
-      if (flag.color == COLOR_WHITE && Game.time % 5 == 0) {//preview only once every 5th tick, might need rethinking
+      if (flag.color == COLOR_WHITE) {
         this.buildBase(flag.pos, layoutToBeUsed, 4, true);
       } else if (flag.color == COLOR_GREY && Game.time % 10 == 0) {//Construct only once every 10th tick
         this.buildBase(flag.pos, layoutToBeUsed, 4, false);
