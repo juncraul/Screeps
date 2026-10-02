@@ -36,7 +36,7 @@
     "rollup-plugin-commonjs": "^9.1.4",
     "rollup-plugin-node-resolve": "^3.3.0",
     "rollup-plugin-screeps": "^0.1.2",
-    "rollup-plugin-typescript2": "^0.16.1",
+    "rollup-plugin-typescript2": "^0.37.0",
     "tslint": "^5.9.1",
     "tslint-config-prettier": "^1.14.0",
     "typescript": "^2.9.2"
